@@ -2,65 +2,80 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Monitor de Inversión + Gráfico</title>
+    <title>Monitor de Inversión - Estrategia Mensual</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { --p: #00ff88; --bg: #0b0f1a; --card: #161c2d; --accent: #38bdf8; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; display: flex; justify-content: center; padding: 20px; }
-        .container { background: var(--card); padding: 30px; border-radius: 20px; width: 100%; max-width: 800px; border: 1px solid #2d3748; box-shadow: 0 20px 50px rgba(0,0,0,0.5); display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        h2 { grid-column: 1 / span 2; text-align: center; color: var(--p); text-transform: uppercase; letter-spacing: 2px; font-size: 18px; margin-bottom: 10px; }
+        .container { background: var(--card); padding: 30px; border-radius: 20px; width: 100%; max-width: 900px; border: 1px solid #2d3748; box-shadow: 0 20px 50px rgba(0,0,0,0.5); display: grid; grid-template-columns: 350px 1fr; gap: 25px; }
+        h2 { grid-column: 1 / span 2; text-align: center; color: var(--p); text-transform: uppercase; letter-spacing: 2px; font-size: 18px; margin-bottom: 10px; border-bottom: 1px solid #2d3748; padding-bottom: 10px; }
         
-        .monitor-side { display: flex; flex-direction: column; gap: 15px; }
-        .chart-side { background: #0f172a; padding: 15px; border-radius: 15px; border: 1px solid #2d3748; display: flex; flex-direction: column; justify-content: center; }
+        .controls-side { display: flex; flex-direction: column; gap: 12px; }
+        .chart-side { background: #0f172a; padding: 20px; border-radius: 15px; border: 1px solid #2d3748; display: flex; align-items: center; }
 
         .live-display { background: #000; padding: 15px; border-radius: 12px; text-align: center; border: 1px solid var(--p); }
-        .live-amount { font-family: 'Courier New', monospace; font-size: 24px; font-weight: bold; color: var(--p); }
+        .live-amount { font-family: 'Courier New', monospace; font-size: 26px; font-weight: bold; color: var(--p); }
         
-        .section-title { font-size: 10px; color: var(--accent); text-transform: uppercase; margin-top: 10px; letter-spacing: 1px; }
+        .section-title { font-size: 10px; color: var(--accent); text-transform: uppercase; margin-top: 5px; letter-spacing: 1px; font-weight: bold; }
+        .input-group { display: flex; flex-direction: column; gap: 5px; }
+        label { font-size: 11px; color: #94a3b8; }
         input { width: 100%; padding: 10px; background: #0b0f1a; border: 1px solid #2d3748; color: white; border-radius: 8px; font-size: 16px; outline: none; box-sizing: border-box; }
-        input:focus { border-color: var(--accent); }
+        input:focus { border-color: var(--p); }
 
-        .injection-panel { background: #1e293b; padding: 10px; border-radius: 10px; display: flex; gap: 5px; }
-        .btn-add { background: var(--p); color: #0b0f1a; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; padding: 0 15px; }
+        .injection-panel { background: #1e293b; padding: 10px; border-radius: 10px; display: flex; gap: 5px; margin-top: 5px; }
+        .btn-add { background: var(--p); color: #0b0f1a; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; padding: 0 15px; transition: 0.2s; }
+        .btn-add:hover { transform: scale(1.05); }
 
         .res-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
         .res-box { background: #0b0f1a; padding: 10px; border-radius: 8px; text-align: center; border: 1px solid #2d3748; }
-        .res-val { display: block; font-size: 14px; font-weight: bold; color: var(--accent); }
+        .res-val { display: block; font-size: 15px; font-weight: bold; color: var(--accent); }
         
-        .footer { grid-column: 1 / span 2; text-align: center; font-size: 11px; color: #64748b; margin-top: 10px; }
+        .footer { grid-column: 1 / span 2; text-align: center; font-size: 11px; color: #64748b; margin-top: 15px; border-top: 1px solid #2d3748; padding-top: 10px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Evolución de Inversión</h2>
+    <h2>Estrategia de Inversión Mensual</h2>
     
-    <div class="monitor-side">
+    <div class="controls-side">
         <div class="live-display">
-            <div style="font-size: 9px; color: #888;">SALDO EN VIVO (ARG)</div>
+            <div style="font-size: 9px; color: #888;">SALDO EN TIEMPO REAL (ARG)</div>
             <div id="live-money" class="live-amount">$ 0,00</div>
-            <div id="acc-today" style="font-size: 12px; color: var(--p); margin-top: 3px;">Hoy: $0,00</div>
+            <div id="acc-today" style="font-size: 12px; color: var(--p); margin-top: 3px;">+ $0,00 hoy</div>
         </div>
 
-        <div class="section-title">Inyectar</div>
+        <div class="section-title">Aporte Único (Hoy)</div>
         <div class="injection-panel">
-            <input type="number" id="manual_amount" placeholder="Monto...">
-            <button class="btn-add" onclick="injectManual()">Sumar</button>
+            <input type="number" id="manual_amount" placeholder="Sumar monto...">
+            <button class="btn-add" onclick="injectManual()">Ok</button>
         </div>
 
-        <div class="section-title">Configuración</div>
-        <label style="font-size: 10px;">Capital Base</label>
-        <input type="number" id="cap" value="1272750" oninput="updateAll()">
+        <div class="section-title">Configuración de Plan</div>
+        <div class="input-group">
+            <label>Capital Inicial ($)</label>
+            <input type="number" id="cap" value="1272750" oninput="updateAll()">
+        </div>
         
-        <label style="font-size: 10px;">TNA %</label>
-        <input type="number" id="tna" value="32" oninput="updateAll()">
-        
-        <label style="font-size: 10px;">Plazo (Años)</label>
-        <input type="number" id="yrs" value="1" oninput="updateAll()">
+        <div class="input-group" style="background: rgba(56, 189, 248, 0.1); padding: 8px; border-radius: 8px;">
+            <label style="color: var(--accent);">Aporte Fijo Mensual ($)</label>
+            <input type="number" id="apo_mensual" value="0" placeholder="Ej: 50000" oninput="updateAll()">
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <div class="input-group">
+                <label>TNA %</label>
+                <input type="number" id="tna" value="32" oninput="updateAll()">
+            </div>
+            <div class="input-group">
+                <label>Años</label>
+                <input type="number" id="yrs" value="1" oninput="updateAll()">
+            </div>
+        </div>
 
         <div class="res-grid">
             <div class="res-box">
-                <span style="font-size: 9px; color: #94a3b8;">FINAL</span>
+                <span style="font-size: 9px; color: #94a3b8;">VALOR FINAL</span>
                 <span id="v_total" class="res-val">$ 0</span>
             </div>
             <div class="res-box">
@@ -75,7 +90,7 @@
     </div>
 
     <div class="footer">
-        📅 <span id="fecha-ar"></span> | <span id="hora-ar"></span>
+        📅 <span id="fecha-ar"></span> | <span id="hora-ar"></span> | Zona: America/Argentina/Buenos_Aires
     </div>
 </div>
 
@@ -93,32 +108,36 @@
     }
 
     function updateAll() {
-        const cap = parseFloat(document.getElementById('cap').value) || 0;
+        const capInicial = parseFloat(document.getElementById('cap').value) || 0;
+        const apoMensual = parseFloat(document.getElementById('apo_mensual').value) || 0;
         const tna = (parseFloat(document.getElementById('tna').value) || 0) / 100;
         const yrs = parseFloat(document.getElementById('yrs').value) || 0;
 
         let meses = Math.floor(yrs * 12) || 1;
-        let saldoProy = cap;
+        let saldoProy = capInicial;
         let tasaMensual = tna / 12;
 
-        let dataPuntos = [cap];
+        let dataPuntos = [capInicial];
         let etiquetas = ["Inicio"];
-        let capitalPuro = [cap];
+        let capitalAportado = [capInicial]; // Para ver cuánto pusiste vos vs intereses
 
         for (let i = 1; i <= meses; i++) {
-            saldoProy += (saldoProy * tasaMensual);
+            saldoProy += apoMensual; // Sumamos el aporte mensual fijo
+            saldoProy += (saldoProy * tasaMensual); // Aplicamos interés compuesto
+            
             dataPuntos.push(saldoProy);
-            capitalPuro.push(cap);
+            capitalAportado.push(capInicial + (apoMensual * i));
             etiquetas.push("Mes " + i);
         }
 
         document.getElementById('v_total').innerText = saldoProy.toLocaleString('es-AR', {style:'currency', currency:'ARS'});
-        document.getElementById('v_int').innerText = (saldoProy - cap).toLocaleString('es-AR', {style:'currency', currency:'ARS'});
+        let totalAportado = capInicial + (apoMensual * meses);
+        document.getElementById('v_int').innerText = (saldoProy - totalAportado).toLocaleString('es-AR', {style:'currency', currency:'ARS'});
 
-        updateChart(etiquetas, dataPuntos, capitalPuro);
+        updateChart(etiquetas, dataPuntos, capitalAportado);
     }
 
-    function updateChart(labels, data, base) {
+    function updateChart(labels, totalData, baseData) {
         const ctx = document.getElementById('myChart').getContext('2d');
         if (myChart) myChart.destroy();
 
@@ -127,15 +146,16 @@
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'Interés Compuesto',
-                    data: data,
+                    label: 'Saldo Total (con Interés)',
+                    data: totalData,
                     borderColor: '#00ff88',
                     backgroundColor: 'rgba(0, 255, 136, 0.1)',
                     fill: true,
-                    tension: 0.3
+                    tension: 0.3,
+                    borderWidth: 3
                 }, {
-                    label: 'Capital Inicial',
-                    data: base,
+                    label: 'Total Invertido (tus aportes)',
+                    data: baseData,
                     borderColor: '#64748b',
                     borderDash: [5, 5],
                     fill: false
@@ -143,10 +163,11 @@
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 plugins: { legend: { labels: { color: 'white', font: { size: 10 } } } },
                 scales: {
-                    y: { ticks: { color: '#64748b' }, grid: { color: '#1e293b' } },
-                    x: { ticks: { color: '#64748b' }, grid: { display: false } }
+                    y: { ticks: { color: '#64748b', font: { size: 9 } }, grid: { color: '#1e293b' } },
+                    x: { ticks: { color: '#64748b', font: { size: 9 } }, grid: { display: false } }
                 }
             }
         });
@@ -168,7 +189,7 @@
         document.getElementById('live-money').innerText = (cap + acumuladoHoy).toLocaleString('es-AR', {
             style: 'currency', currency: 'ARS', minimumFractionDigits: 3
         });
-        document.getElementById('acc-today').innerText = "Hoy: $" + acumuladoHoy.toLocaleString('es-AR', {minimumFractionDigits: 2});
+        document.getElementById('acc-today').innerText = "+ $" + acumuladoHoy.toLocaleString('es-AR', {minimumFractionDigits: 2}) + " hoy";
     }
 
     setInterval(tick, 1000);
