@@ -3,32 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inversión Gold - Proyección Total</title>
+    <title>Inversión Gold - Monitor Profesional</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { --p: #00ff88; --bg: #0b0f1a; --card: #161c2d; --accent: #38bdf8; --border: #2d3748; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; padding: 10px; overflow-x: hidden; }
         .container { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 15px; }
         
+        /* Header y Sidebar */
         .header { display: flex; justify-content: space-between; align-items: center; padding: 10px 5px; }
         .settings-btn { font-size: 24px; cursor: pointer; color: var(--accent); transition: 0.3s; }
         .sidebar { position: fixed; top: 0; right: -300px; width: 280px; height: 100%; background: #1a2236; z-index: 1000; transition: 0.4s; padding: 25px; border-left: 1px solid var(--border); }
         .sidebar.open { right: 0; }
         .close-btn { cursor: pointer; font-size: 20px; color: #ff5555; float: right; }
 
+        /* Monitor */
         .live-display { background: #000; padding: 20px; border-radius: 20px; text-align: center; border: 2px solid var(--p); box-shadow: 0 0 20px rgba(0,255,136,0.1); }
         .live-amount { font-family: 'Courier New', monospace; font-size: clamp(24px, 6vw, 32px); font-weight: bold; color: var(--p); }
         
+        /* Inyección */
         .injection-box { background: var(--card); padding: 20px; border-radius: 15px; border: 1px solid var(--border); }
         .btn-inject { width: 100%; background: var(--p); color: #0b0f1a; border: none; border-radius: 10px; padding: 15px; font-weight: bold; cursor: pointer; margin-top: 10px; }
 
-        .chart-container { height: 320px; background: var(--card); border-radius: 15px; padding: 15px; border: 1px solid var(--border); }
+        /* Gráfico */
+        .chart-container { height: 380px; background: var(--card); border-radius: 15px; padding: 15px; border: 1px solid var(--border); position: relative; }
         
-        .goals-container { margin-top: 10px; }
-        .goals-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+        .goals-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-top: 10px; }
         .goal-item { background: var(--card); padding: 12px; border-radius: 12px; border: 1px solid var(--border); text-align: center; }
         .goal-item.reached { border-color: var(--p); background: rgba(0,255,136,0.05); }
-        .goal-item.next { border-color: var(--accent); box-shadow: 0 0 10px rgba(56, 189, 248, 0.2); }
 
         input { width: 100%; padding: 12px; background: #0b0f1a; border: 1px solid var(--border); color: white; border-radius: 8px; margin-top: 5px; box-sizing: border-box; }
         label { display: block; font-size: 11px; color: var(--accent); margin-top: 15px; }
@@ -58,24 +60,20 @@
         <div id="live-money" class="live-amount">$ 0,00</div>
         <div id="acc-today" style="font-size: 14px; color: var(--p); margin-top: 5px;">...</div>
         <div style="background: #1e293b; padding: 8px; border-radius: 10px; margin-top: 10px; display: inline-block;">
-            <span style="font-size: 10px; color: #888;">GANA HOY:</span>
-            <span id="daily-value" style="font-weight: bold; color: var(--accent);">$ 0,00</span>
+            <span id="daily-value" style="font-weight: bold; color: var(--accent); font-size: 16px;">$ 0,00 / día</span>
         </div>
     </div>
 
     <div class="injection-box">
         <input type="number" id="manual_amount" placeholder="Monto a inyectar..." step="any">
-        <button class="btn-inject" onclick="injectCapital()">Confirmar Inyección</button>
+        <button class="btn-inject" onclick="injectCapital()">Inyectar Capital</button>
     </div>
 
     <div class="chart-container">
         <canvas id="myChart"></canvas>
     </div>
 
-    <div class="goals-container">
-        <div style="font-size: 11px; color: var(--accent); font-weight: bold; margin-bottom: 10px; text-transform: uppercase;">Metas según proyección</div>
-        <div id="goals-list" class="goals-grid"></div>
-    </div>
+    <div id="goals-list" class="goals-grid"></div>
 </div>
 
 <script type="module">
@@ -146,23 +144,20 @@
         const tasaM = tna / 12;
         
         const gDiariaActual = (cap * tna) / 365;
-        document.getElementById('daily-value').innerText = gDiariaActual.toLocaleString('es-AR', {style:'currency', currency:'ARS'});
+        document.getElementById('daily-value').innerText = gDiariaActual.toLocaleString('es-AR', {style:'currency', currency:'ARS'}) + " / día";
 
         let mesesP = Math.floor(yrs * 12);
-        let labels = [], dataPuro = [], dataCompuesto = [], dataSimple = [];
-        let sCompuesto = cap, sSimple = cap, aPuro = cap;
+        let labels = [], dataPuro = [], dataCompuesto = [];
+        let sCompuesto = cap, aPuro = cap;
 
         for (let i = 0; i <= mesesP; i++) {
-            labels.push("M" + i);
+            labels.push(i); // Guardamos solo el número del mes para el cálculo del tooltip
             dataPuro.push(aPuro);
             dataCompuesto.push(sCompuesto);
-            dataSimple.push(sSimple);
             sCompuesto = (sCompuesto + apo) * (1 + tasaM);
-            sSimple = sSimple + apo + (aPuro * tasaM);
             aPuro += apo;
         }
 
-        // Dibujar Gráfico
         const ctx = document.getElementById('myChart').getContext('2d');
         if (myChart) myChart.destroy();
         myChart = new Chart(ctx, {
@@ -170,48 +165,74 @@
             data: {
                 labels,
                 datasets: [
-                    { label: 'Compuesto', data: dataCompuesto, borderColor: '#00ff88', tension: 0.3, fill: false },
-                    { label: 'Puro', data: dataPuro, borderColor: '#64748b', tension: 0, fill: false }
+                    { label: 'Total (Interés Compuesto)', data: dataCompuesto, borderColor: '#00ff88', tension: 0.3, fill: false, pointRadius: 0, pointHitRadius: 10 },
+                    { label: 'Inversión Pura (Aportes)', data: dataPuro, borderColor: '#64748b', tension: 0, borderDash: [5, 5], fill: false, pointRadius: 0 }
                 ]
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
-                scales: { y: { ticks: { color: '#64748b', font: { size: 9 } } }, x: { ticks: { display: false } } } }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false }, // ESTO HACE QUE MUESTRE AMBOS AL MISMO TIEMPO
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        enabled: true,
+                        backgroundColor: 'rgba(11, 15, 26, 0.9)',
+                        titleColor: '#38bdf8',
+                        titleFont: { size: 16, weight: 'bold' },
+                        bodyFont: { size: 14 },
+                        padding: 12,
+                        borderColor: '#2d3748',
+                        borderWidth: 1,
+                        displayColors: true,
+                        callbacks: {
+                            title: function(context) {
+                                let mes = context[0].label;
+                                let año = Math.floor(mes / 12);
+                                let mesRestante = mes % 12;
+                                return `Mes: ${mes} (Año ${año}, Mes ${mesRestante})`;
+                            },
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                let val = context.parsed.y.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' });
+                                return `${label}: ${val}`;
+                            }
+                        }
+                    }
+                },
+                scales: { 
+                    y: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: '#1e293b' } },
+                    x: { ticks: { color: '#64748b', display: false }, grid: { display: false } }
+                }
+            }
         });
 
-        // LÓGICA DE METAS DINÁMICA
+        // Actualizar Metas
         const list = document.getElementById('goals-list');
         list.innerHTML = '';
-        const gananciaFinalProyectada = (sCompuesto * tna) / 365;
-        
-        // El salto de las metas se ajusta según qué tan grande es la cifra final
+        const ganFinal = (sCompuesto * tna) / 365;
         let salto = 100;
-        if (gananciaFinalProyectada > 20000) salto = 500;
-        if (gananciaFinalProyectada > 100000) salto = 5000;
-
-        for (let m = 100; m <= gananciaFinalProyectada + salto; m += salto) {
-            // Solo mostrar metas cercanas a la actual y todas las futuras de la proyección
+        if (ganFinal > 20000) salto = 500;
+        
+        for (let m = 100; m <= ganFinal + salto; m += salto) {
             if (m < gDiariaActual - (salto * 2)) continue;
-
             let div = document.createElement('div');
             let mCount = 0, sTemp = cap;
             let lograda = gDiariaActual >= m;
-
             if (!lograda) {
                 while ((sTemp * tna / 365) < m && mCount < mesesP) {
                     sTemp = (sTemp + apo) * (1 + tasaM); mCount++;
                 }
             }
-
-            div.className = 'goal-item ' + (lograda ? 'reached' : (mCount < mesesP ? 'next' : ''));
-            // Si la meta no se alcanza en los años puestos, no la mostramos o la marcamos diferente
             if (!lograda && mCount >= mesesP) continue; 
-
+            div.className = 'goal-item ' + (lograda ? 'reached' : '');
             div.innerHTML = `<div style="font-size:11px;color:${lograda?'var(--p)':'var(--accent)'}">$${m.toLocaleString()}/día</div>
                              <div style="font-size:10px;opacity:0.6">${lograda?'Logrado':'En '+mCount+' m'}</div>`;
             list.appendChild(div);
         }
     }
 
+    // Cronómetro en tiempo real
     setInterval(() => {
         const cap = parseFloat(document.getElementById('cap').value) || 0;
         const tna = (parseFloat(document.getElementById('tna').value) || 0) / 100;
@@ -220,7 +241,7 @@
         if (now < inicio) inicio.setDate(inicio.getDate() - 1);
         let acc = ((now - inicio) / 1000) * ((cap * tna / 365) / 86400);
         document.getElementById('live-money').innerText = (cap + acc).toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 3 });
-        document.getElementById('acc-today').innerText = "Ganado hoy: $" + acc.toLocaleString('es-AR', {minimumFractionDigits: 2});
+        document.getElementById('acc-today').innerText = "Acumulado: $" + acc.toLocaleString('es-AR', {minimumFractionDigits: 2});
     }, 1000);
 </script>
 </body>
