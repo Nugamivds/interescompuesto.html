@@ -1,4 +1,197 @@
-function render(labels, total, invertido, intereses) {
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Inversión Gold - Mobile Ready</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --gold: #d4af37;
+            --gold-light: #f7ef8a;
+            --dark-panel: rgba(15, 15, 15, 0.95);
+        }
+
+        body { 
+            margin: 0; padding: 10px; font-family: 'Segoe UI', sans-serif; 
+            background: url('https://c1.wallpaperflare.com/preview/489/364/872/dollars-money-us-dollars-cash.jpg') no-repeat center center fixed;
+            background-size: cover; color: white; min-height: 100vh;
+        }
+
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: -1; }
+
+        .container { 
+            max-width: 1200px; margin: auto; 
+            display: grid; 
+            grid-template-columns: 1fr; /* Una columna por defecto para móvil */
+            gap: 20px; 
+        }
+
+        /* En pantallas grandes (PC), volvemos a las dos columnas */
+        @media (min-width: 850px) {
+            .container { grid-template-columns: 380px 1fr; }
+        }
+
+        .panel { 
+            background: var(--dark-panel); padding: 20px; border-radius: 15px; border: 1px solid var(--gold);
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.2); backdrop-filter: blur(5px);
+        }
+
+        h2 { color: var(--gold); text-align: center; text-transform: uppercase; font-size: 16px; border-bottom: 1px solid var(--gold); padding-bottom: 8px; }
+
+        label { display: block; font-size: 10px; font-weight: bold; color: var(--gold); margin-bottom: 3px; }
+
+        input { 
+            width: 100%; padding: 10px; background: #000; border: 1px solid var(--gold); 
+            border-radius: 8px; color: #ffd700; font-size: 16px; box-sizing: border-box; margin-bottom: 10px;
+        }
+
+        .btn-inject { 
+            width: 100%; background: linear-gradient(45deg, #b8860b, var(--gold-light), var(--gold));
+            color: #000; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer;
+        }
+
+        .diario-card { background: #000; border: 1px solid var(--gold); padding: 10px; border-radius: 10px; text-align: center; margin: 10px 0; }
+        .diario-card div { font-size: 24px; font-weight: bold; color: #ffd700; }
+
+        /* Contenedor del gráfico con altura fija para que no desaparezca en móvil */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+            background: rgba(0,0,0,0.5);
+            border-radius: 10px;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        .metas-container { max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.6); border-radius: 10px; font-size: 13px; }
+        table { width: 100%; border-collapse: collapse; }
+        td { padding: 10px; border-bottom: 1px solid rgba(212,175,55,0.1); }
+        .meta-ok { color: #ffd700; background: rgba(212, 175, 55, 0.2); font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="overlay"></div>
+
+<div class="container">
+    <div class="panel">
+        <h2>💰 MOVIMIENTOS</h2>
+        <label>INYECTAR CAPITAL ($)</label>
+        <input type="number" id="montoInyectar" placeholder="Monto extra...">
+        <button class="btn-inject" onclick="inyectar()">SUMAR AL CAPITAL</button>
+        
+        <div style="margin-top: 15px;">
+            <label>CAPITAL ACTUAL ($)</label>
+            <input type="number" id="cap" oninput="actualizar()">
+            <label>APORTE MENSUAL ($)</label>
+            <input type="number" id="apo" oninput="actualizar()">
+            <label>TASA ANUAL (TNA %)</label>
+            <input type="number" id="tna" oninput="actualizar()">
+            <label>PLAZO (AÑOS)</label>
+            <input type="number" id="yrs" oninput="actualizar()">
+        </div>
+
+        <div class="diario-card">
+            <small style="color:var(--gold)">GANANCIA DIARIA</small>
+            <div id="rentaDiaria">$ 0</div>
+        </div>
+
+        <h2>🏆 METAS</h2>
+        <div class="metas-container">
+            <table><tbody id="tablaMetas"></tbody></table>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h2>📈 PROYECCIÓN</h2>
+        <div class="chart-container">
+            <canvas id="miGrafico"></canvas>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
+            <div class="diario-card"><small style="font-size:9px">TOTAL</small><div id="resTotal" style="font-size: 16px;"></div></div>
+            <div class="diario-card"><small style="font-size:9px">INTERÉS</small><div id="resInt" style="font-size: 16px;"></div></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let grafico;
+
+    window.onload = function() {
+        document.getElementById('cap').value = localStorage.getItem('cap') || 100000;
+        document.getElementById('apo').value = localStorage.getItem('apo') || 10000;
+        document.getElementById('tna').value = localStorage.getItem('tna') || 40;
+        document.getElementById('yrs').value = localStorage.getItem('yrs') || 5;
+        actualizar();
+    };
+
+    function inyectar() {
+        const extra = parseFloat(document.getElementById('montoInyectar').value) || 0;
+        const actual = parseFloat(document.getElementById('cap').value) || 0;
+        if(extra > 0) {
+            document.getElementById('cap').value = actual + extra;
+            document.getElementById('montoInyectar').value = "";
+            actualizar();
+        }
+    }
+
+    function actualizar() {
+        const cap = parseFloat(document.getElementById('cap').value) || 0;
+        const apo = parseFloat(document.getElementById('apo').value) || 0;
+        const tna = parseFloat(document.getElementById('tna').value) || 0;
+        const yrs = parseFloat(document.getElementById('yrs').value) || 0;
+
+        localStorage.setItem('cap', cap);
+        localStorage.setItem('apo', apo);
+        localStorage.setItem('tna', tna);
+        localStorage.setItem('yrs', yrs);
+
+        const tMensual = (tna / 100) / 12;
+        const tDiaria = (tna / 100) / 365;
+        const meses = Math.floor(yrs * 12);
+
+        document.getElementById('rentaDiaria').innerText = (cap * tDiaria).toLocaleString('es-AR', {style:'currency', currency:'ARS'});
+
+        let metas = [1200, 1500, 2000, 3000, 5000, 10000];
+        let metasEnc = {};
+        let labels = [], dataTotal = [], dataInvertido = [], dataSoloInteres = [];
+        let saldoAc = cap, invAc = cap;
+
+        for (let i = 0; i <= meses; i++) {
+            if (i > 0) {
+                invAc += apo;
+                saldoAc += apo;
+                saldoAc += (saldoAc * tMensual);
+            }
+            labels.push("M" + i);
+            dataTotal.push(saldoAc);
+            dataInvertido.push(invAc);
+            dataSoloInteres.push(saldoAc - invAc);
+
+            let rD = saldoAc * tDiaria;
+            metas.forEach(m => {
+                if (!metasEnc[m] && rD >= m) metasEnc[m] = (i === 0) ? "Ok" : "M" + i;
+            });
+        }
+
+        let html = "";
+        metas.forEach(m => {
+            let log = metasEnc[m];
+            html += `<tr class="${log==='Ok'?'meta-ok':''}"><td>$${m.toLocaleString()}</td><td align="right">${log||'--'}</td></tr>`;
+        });
+        document.getElementById('tablaMetas').innerHTML = html;
+
+        const f = (v) => v.toLocaleString('es-AR', {style:'currency', currency:'ARS'});
+        document.getElementById('resTotal').innerText = f(saldoAc);
+        document.getElementById('resInt').innerText = f(saldoAc - invAc);
+
+        render(labels, dataTotal, dataInvertido, dataSoloInteres);
+    }
+
+    function render(labels, total, inv, int) {
         const ctx = document.getElementById('miGrafico').getContext('2d');
         if (grafico) grafico.destroy();
         grafico = new Chart(ctx, {
@@ -6,58 +199,21 @@ function render(labels, total, invertido, intereses) {
             data: {
                 labels: labels,
                 datasets: [
-                    { 
-                        label: 'TOTAL ACUMULADO', 
-                        data: total, 
-                        borderColor: '#d4af37', 
-                        borderWidth: 4, // Más gruesa
-                        fill: false, 
-                        tension: 0.3, 
-                        pointRadius: 0 
-                    },
-                    { 
-                        label: 'CAPITAL INVERTIDO (TU PLATA)', 
-                        data: invertido, 
-                        borderColor: '#ffffff', 
-                        borderWidth: 2,
-                        borderDash: [5, 5], // Línea punteada
-                        fill: false, 
-                        tension: 0.1, 
-                        pointRadius: 0 
-                    },
-                    { 
-                        label: 'GANANCIA POR INTERÉS', 
-                        data: intereses, 
-                        borderColor: '#39ff14', // Verde neón
-                        borderWidth: 2,
-                        fill: false, 
-                        tension: 0.3, 
-                        pointRadius: 0 
-                    }
+                    { label: 'TOTAL', data: total, borderColor: '#d4af37', borderWidth: 3, fill: false, tension: 0.3, pointRadius: 0 },
+                    { label: 'CAPITAL', data: inv, borderColor: '#ffffff', borderWidth: 2, borderDash: [5,5], fill: false, tension: 0.1, pointRadius: 0 },
+                    { label: 'GANANCIA', data: int, borderColor: '#39ff14', borderWidth: 2, fill: false, tension: 0.3, pointRadius: 0 }
                 ]
             },
             options: { 
-                responsive: true, 
-                maintainAspectRatio: false,
-                plugins: { 
-                    legend: { 
-                        display: true,
-                        labels: { color: '#d4af37', font: { size: 12, weight: 'bold' } } 
-                    } 
-                },
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { labels: { color: '#d4af37', font: { size: 9 } }, position: 'top' } },
                 scales: {
-                    x: { 
-                        ticks: { color: '#d4af37' }, 
-                        grid: { display: false } 
-                    },
-                    y: { 
-                        ticks: { 
-                            color: '#d4af37', 
-                            callback: v => '$' + v.toLocaleString('es-AR') 
-                        }, 
-                        grid: { color: 'rgba(212,175,55,0.1)' } 
-                    }
+                    x: { ticks: { color: '#d4af37', font: { size: 9 } } },
+                    y: { ticks: { color: '#d4af37', font: { size: 9 } } }
                 }
             }
         });
     }
+</script>
+</body>
+</html>
