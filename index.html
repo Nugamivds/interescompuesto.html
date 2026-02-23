@@ -3,45 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inversión Gold - Zen Mode</title>
+    <title>Inversión Gold - Interés Compuesto</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { --p: #00ff88; --bg: #0b0f1a; --card: #161c2d; --accent: #38bdf8; --border: #2d3748; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; padding: 10px; overflow-x: hidden; }
-        
-        /* Contenedor Principal */
         .container { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 15px; }
         
-        /* Navbar con Tuerca */
+        /* Header y Sidebar */
         .header { display: flex; justify-content: space-between; align-items: center; padding: 10px 5px; }
         .settings-btn { font-size: 24px; cursor: pointer; color: var(--accent); transition: transform 0.3s; }
-        .settings-btn:hover { transform: rotate(90deg); }
-
-        /* Sidebar / Menú Oculto */
-        .sidebar { position: fixed; top: 0; right: -300px; width: 280px; height: 100%; background: #1a2236; box-shadow: -5px 0 15px rgba(0,0,0,0.5); z-index: 1000; transition: 0.4s; padding: 25px; box-sizing: border-box; border-left: 1px solid var(--border); }
+        .sidebar { position: fixed; top: 0; right: -300px; width: 280px; height: 100%; background: #1a2236; z-index: 1000; transition: 0.4s; padding: 25px; border-left: 1px solid var(--border); }
         .sidebar.open { right: 0; }
-        .sidebar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; color: var(--p); font-weight: bold; }
-        .close-btn { cursor: pointer; font-size: 20px; color: #ff5555; }
+        .close-btn { cursor: pointer; font-size: 20px; color: #ff5555; float: right; }
 
-        /* Monitor */
+        /* Monitor Principal */
         .live-display { background: #000; padding: 20px; border-radius: 20px; text-align: center; border: 2px solid var(--p); box-shadow: 0 0 20px rgba(0,255,136,0.1); }
         .live-amount { font-family: 'Courier New', monospace; font-size: clamp(24px, 6vw, 32px); font-weight: bold; color: var(--p); }
         .daily-badge { background: #1e293b; padding: 8px; border-radius: 10px; margin-top: 10px; display: inline-block; border-left: 3px solid var(--accent); }
 
         /* Inyección */
-        .injection-box { background: var(--card); padding: 20px; border-radius: 15px; border: 1px solid var(--border); text-align: center; }
-        .btn-inject { width: 100%; background: var(--p); color: #0b0f1a; border: none; border-radius: 10px; padding: 15px; font-weight: bold; cursor: pointer; margin-top: 10px; text-transform: uppercase; }
+        .injection-box { background: var(--card); padding: 20px; border-radius: 15px; border: 1px solid var(--border); }
+        .btn-inject { width: 100%; background: var(--p); color: #0b0f1a; border: none; border-radius: 10px; padding: 15px; font-weight: bold; cursor: pointer; margin-top: 10px; }
 
-        /* Metas */
-        .goals-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-top: 5px; }
+        /* Gráfico y Metas */
+        .chart-container { height: 320px; background: var(--card); border-radius: 15px; padding: 15px; border: 1px solid var(--border); }
+        .goals-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
         .goal-item { background: var(--card); padding: 12px; border-radius: 12px; border: 1px solid var(--border); text-align: center; }
         .goal-item.reached { border-color: var(--p); background: rgba(0,255,136,0.05); }
 
-        /* Inputs Generales */
-        label { display: block; font-size: 11px; color: var(--accent); margin-top: 15px; text-transform: uppercase; }
-        input { width: 100%; padding: 12px; background: #0b0f1a; border: 1px solid var(--border); color: white; border-radius: 8px; font-size: 16px; margin-top: 5px; box-sizing: border-box; }
-        
-        .chart-container { height: 250px; background: var(--card); border-radius: 15px; padding: 10px; border: 1px solid var(--border); }
+        input { width: 100%; padding: 12px; background: #0b0f1a; border: 1px solid var(--border); color: white; border-radius: 8px; margin-top: 5px; box-sizing: border-box; }
+        label { display: block; font-size: 11px; color: var(--accent); margin-top: 15px; }
         .overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); display:none; z-index:999; }
     </style>
 </head>
@@ -50,31 +42,17 @@
 <div id="overlay" class="overlay" onclick="toggleMenu()"></div>
 
 <div id="sidebar" class="sidebar">
-    <div class="sidebar-header">
-        <span>CONFIGURACIÓN</span>
-        <span class="close-btn" onclick="toggleMenu()">✖</span>
-    </div>
-    
-    <label>Capital Base ($)</label>
-    <input type="number" id="cap" onchange="saveData()">
-    
-    <label>Aporte Mensual ($)</label>
-    <input type="number" id="apo_mensual" onchange="saveData()">
-    
-    <label>TNA %</label>
-    <input type="number" id="tna" onchange="saveData()">
-    
-    <label>Años Proyección</label>
-    <input type="number" id="yrs" onchange="saveData()">
-    
-    <div style="margin-top: 30px; font-size: 10px; color: #64748b; text-align: center;">
-        Los cambios se guardan automáticamente en la nube.
-    </div>
+    <span class="close-btn" onclick="toggleMenu()">✖</span>
+    <h3 style="color:var(--p); margin-bottom:20px;">AJUSTES</h3>
+    <label>Capital Base ($)</label><input type="number" id="cap" onchange="saveData()">
+    <label>Aporte Mensual ($)</label><input type="number" id="apo_mensual" onchange="saveData()">
+    <label>TNA %</label><input type="number" id="tna" onchange="saveData()">
+    <label>Años Proyección</label><input type="number" id="yrs" onchange="saveData()">
 </div>
 
 <div class="container">
     <div class="header">
-        <h2 style="margin:0; color:var(--p); font-size: 18px;">GOLD MONITOR</h2>
+        <h2 style="margin:0; color:var(--p); font-size: 18px;">GOLD DASHBOARD</h2>
         <div class="settings-btn" onclick="toggleMenu()">⚙️</div>
     </div>
 
@@ -82,21 +60,20 @@
         <div id="live-money" class="live-amount">$ 0,00</div>
         <div id="acc-today" style="font-size: 14px; color: var(--p); margin-top: 5px;">...</div>
         <div class="daily-badge">
-            <span style="font-size: 10px; color: #888;">RENDIMIENTO DIARIO:</span>
+            <span style="font-size: 10px; color: #888;">GANA POR DÍA:</span>
             <span id="daily-value" style="font-weight: bold; color: var(--accent);">$ 0,00</span>
         </div>
     </div>
 
     <div class="injection-box">
         <input type="number" id="manual_amount" placeholder="Monto a inyectar..." step="any">
-        <button class="btn-inject" onclick="injectCapital()">Inyectar Capital</button>
+        <button class="btn-inject" onclick="injectCapital()">Confirmar Inyección</button>
     </div>
 
     <div class="chart-container">
         <canvas id="myChart"></canvas>
     </div>
 
-    <div class="section-title" style="font-size: 11px; color: var(--accent); font-weight: bold;">METAS DIARIAS</div>
     <div id="goals-list" class="goals-grid"></div>
 </div>
 
@@ -143,7 +120,7 @@
         const monto = parseFloat(input.value) || 0;
         if (monto > 0) {
             const capActual = parseFloat(document.getElementById('cap').value) || 0;
-            document.getElementById('cap').value = capActual + monto;
+            document.getElementById('cap').value = (capActual + monto).toFixed(2);
             input.value = '';
             saveData();
         }
@@ -154,19 +131,63 @@
     let myChart;
 
     function toggleMenu() {
-        const sidebar = document.getElementById('sidebar');
-        const overlay = document.getElementById('overlay');
-        sidebar.classList.toggle('open');
-        overlay.style.display = sidebar.classList.contains('open') ? 'block' : 'none';
+        const sb = document.getElementById('sidebar');
+        const ov = document.getElementById('overlay');
+        sb.classList.toggle('open');
+        ov.style.display = sb.classList.contains('open') ? 'block' : 'none';
     }
 
     function updateUI() {
         const cap = parseFloat(document.getElementById('cap').value) || 0;
         const apo = parseFloat(document.getElementById('apo_mensual').value) || 0;
         const tna = (parseFloat(document.getElementById('tna').value) || 0) / 100;
+        const yrs = parseFloat(document.getElementById('yrs').value) || 1;
+        const tasaM = tna / 12;
         
         const gDiaria = (cap * tna) / 365;
         document.getElementById('daily-value').innerText = gDiaria.toLocaleString('es-AR', {style:'currency', currency:'ARS'});
+
+        // Datos para gráfico
+        let mesesP = Math.floor(yrs * 12);
+        let labels = [], dataPuro = [], dataCompuesto = [], dataSimple = [];
+        
+        let saldoCompuesto = cap;
+        let saldoSimple = cap;
+        let acumuladoPuro = cap;
+
+        for (let i = 0; i <= mesesP; i++) {
+            labels.push("M" + i);
+            dataPuro.push(acumuladoPuro);
+            dataCompuesto.push(saldoCompuesto);
+            dataSimple.push(saldoSimple);
+
+            // Cálculo mensual
+            acumuladoPuro += apo;
+            saldoSimple = saldoSimple + apo + (saldoSimple * tasaM); // Interés sobre capital base + aportes
+            saldoCompuesto = (saldoCompuesto + apo) * (1 + tasaM); // Interés sobre todo
+        }
+
+        const ctx = document.getElementById('myChart').getContext('2d');
+        if (myChart) myChart.destroy();
+        myChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    { label: 'Int. Compuesto', data: dataCompuesto, borderColor: '#00ff88', tension: 0.3, fill: false },
+                    { label: 'Int. Simple', data: dataSimple, borderColor: '#38bdf8', tension: 0.3, borderDash: [5, 5], fill: false },
+                    { label: 'Inversión Pura', data: dataPuro, borderColor: '#64748b', tension: 0, fill: false }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: true, labels: { color: '#888', font: { size: 10 } } } },
+                scales: { 
+                    y: { ticks: { color: '#64748b', font: { size: 9 } }, grid: { color: '#2d3748' } },
+                    x: { ticks: { color: '#64748b', font: { size: 9 } }, grid: { display: false } }
+                }
+            }
+        });
 
         // Metas
         const list = document.getElementById('goals-list');
@@ -174,34 +195,18 @@
         for (let meta = 100; meta <= 10000; meta += 100) {
             if (meta % 500 !== 0 && (meta < gDiaria - 200 || meta > gDiaria + 1200)) continue;
             let div = document.createElement('div');
-            let meses = 0, saldoTemp = cap;
+            let mCount = 0, sTemp = cap;
             let lograda = gDiaria >= meta;
             if (!lograda) {
-                while ((saldoTemp * tna / 365) < meta && meses < 240) {
-                    saldoTemp = (saldoTemp + apo) * (1 + (tna/12)); meses++;
+                while ((sTemp * tna / 365) < meta && mCount < 360) {
+                    sTemp = (sTemp + apo) * (1 + tasaM); mCount++;
                 }
             }
             div.className = 'goal-item ' + (lograda ? 'reached' : '');
-            div.innerHTML = `<div style="font-size:10px;color:${lograda?'var(--p)':'var(--accent)'}">${lograda?'✅':'🚀'} $${meta}</div>
-                             <div style="font-size:11px;opacity:0.6">${lograda?'Logrado':'En '+meses+' m'}</div>`;
+            div.innerHTML = `<div style="font-size:11px;color:${lograda?'var(--p)':'var(--accent)'}">$${meta}</div>
+                             <div style="font-size:10px;opacity:0.6">${lograda?'Logrado':'En '+mCount+' m'}</div>`;
             list.appendChild(div);
         }
-
-        // Gráfico
-        const yrs = parseFloat(document.getElementById('yrs').value) || 1;
-        let mesesP = Math.floor(yrs * 12), labels = [], dataT = [], saldo = cap;
-        for (let i = 0; i <= mesesP; i++) {
-            dataT.push(saldo); labels.push("M"+i);
-            saldo = (saldo + apo) * (1 + (tna/12));
-        }
-        const ctx = document.getElementById('myChart').getContext('2d');
-        if (myChart) myChart.destroy();
-        myChart = new Chart(ctx, {
-            type: 'line',
-            data: { labels, datasets: [{ data: dataT, borderColor: '#00ff88', tension: 0.3, fill: true, backgroundColor: 'rgba(0,255,136,0.1)' }] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
-                       scales: { y: { ticks: { color: '#64748b' }, grid: { color: '#2d3748' } }, x: { ticks: { color: '#64748b' }, grid: { display: false } } } }
-        });
     }
 
     setInterval(() => {
@@ -212,7 +217,7 @@
         if (now < inicio) inicio.setDate(inicio.getDate() - 1);
         let acc = ((now - inicio) / 1000) * ((cap * tna / 365) / 86400);
         document.getElementById('live-money').innerText = (cap + acc).toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 3 });
-        document.getElementById('acc-today').innerText = "Acumulado: $" + acc.toLocaleString('es-AR', {minimumFractionDigits: 2});
+        document.getElementById('acc-today').innerText = "Creciendo: $" + acc.toLocaleString('es-AR', {minimumFractionDigits: 2});
     }, 1000);
 </script>
 </body>
