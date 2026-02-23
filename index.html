@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inversión Gold - Cloud Sync</title>
+    <title>Inversión Gold - Ciclo 5AM</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { --p: #00ff88; --bg: #0b0f1a; --card: #161c2d; --accent: #38bdf8; }
@@ -19,7 +19,7 @@
         .live-amount { font-family: 'Courier New', monospace; font-size: clamp(22px, 5vw, 28px); font-weight: bold; color: var(--p); }
         
         .section-title { font-size: 11px; color: var(--accent); text-transform: uppercase; font-weight: bold; margin: 10px 0 5px; }
-        input { width: 100%; padding: 12px; background: #0b0f1a; border: 1px solid #2d3748; color: white; border-radius: 10px; font-size: 16px; box-sizing: border-box; transition: 0.3s; }
+        input { width: 100%; padding: 12px; background: #0b0f1a; border: 1px solid #2d3748; color: white; border-radius: 10px; font-size: 16px; box-sizing: border-box; }
         input:focus { border-color: var(--p); outline: none; }
 
         .btn-p { cursor: pointer; border: none; font-weight: bold; border-radius: 8px; padding: 10px; background: var(--p); color: #0b0f1a; width: 100%; }
@@ -33,24 +33,25 @@
 <body>
 
 <div class="container">
-    <h2>Inversión Gold <span style="font-size: 10px; vertical-align: middle; opacity: 0.5;">v2.0 Cloud</span></h2>
+    <h2>Inversión Gold <span style="font-size: 10px; vertical-align: middle; opacity: 0.5;">Ciclo 05:00 AM</span></h2>
     
     <div class="main-content">
         <div class="controls-side">
             <div class="live-display">
-                <div id="sync-indicator" class="status-dot" title="Sincronizado"></div>
+                <div id="sync-indicator" class="status-dot"></div>
                 <div id="live-money" class="live-amount">$ 0,00</div>
-                <div id="acc-today" style="font-size: 14px; color: var(--p); margin-top: 5px;">+ $0,00 hoy</div>
+                <div id="acc-today" style="font-size: 14px; color: var(--p); margin-top: 5px;">Cargando...</div>
+                <div style="font-size: 10px; color: #555; margin-top: 5px;">Próximo pago: Mañana 05:00 AM</div>
             </div>
 
-            <div class="section-title">Aporte Único</div>
+            <div class="section-title">Inyección Manual</div>
             <div style="display: flex; gap: 5px;">
-                <input type="number" id="manual_amount" placeholder="Monto a sumar...">
-                <button class="btn-p" onclick="injectManual()" style="width: 80px;">Ok</button>
+                <input type="number" id="manual_amount" placeholder="Monto...">
+                <button class="btn-p" onclick="injectManual()" style="width: 80px;">Sumar</button>
             </div>
 
-            <div class="section-title">Estrategia (Auto-Sync)</div>
-            <label style="font-size: 10px;">Capital Base ($)</label>
+            <div class="section-title">Configuración</div>
+            <label style="font-size: 10px;">Capital Actual ($)</label>
             <input type="number" id="cap" onchange="saveData()">
             
             <label style="font-size: 10px;">Aporte Mensual ($)</label>
@@ -58,11 +59,11 @@
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                 <div><label style="font-size: 10px;">TNA %</label><input type="number" id="tna" onchange="saveData()"></div>
-                <div><label style="font-size: 10px;">Años</label><input type="number" id="yrs" onchange="saveData()"></div>
+                <div><label style="font-size: 10px;">Años Proyectados</label><input type="number" id="yrs" onchange="saveData()"></div>
             </div>
 
             <div class="res-grid">
-                <div class="res-box"><span style="font-size: 9px; color: #888;">FINAL</span><span id="v_total" style="color:var(--accent); font-weight:bold;">$ 0</span></div>
+                <div class="res-box"><span style="font-size: 9px; color: #888;">VALOR FINAL</span><span id="v_total" style="color:var(--accent); font-weight:bold;">$ 0</span></div>
                 <div class="res-box"><span style="font-size: 9px; color: #888;">GANANCIA</span><span id="v_int" style="color:var(--accent); font-weight:bold;">$ 0</span></div>
             </div>
         </div>
@@ -91,7 +92,6 @@
     const db = getDatabase(app);
     const dataRef = ref(db, 'user_data');
 
-    // Escuchar cambios en la nube
     onValue(dataRef, (snapshot) => {
         const data = snapshot.val();
         if (data) {
@@ -104,7 +104,6 @@
         }
     });
 
-    // Guardar cambios en la nube
     window.saveData = function() {
         set(dataRef, {
             cap: parseFloat(document.getElementById('cap').value) || 0,
@@ -169,17 +168,36 @@
         });
     }
 
+    // RELOJ Y LÓGICA DE 5 AM
     setInterval(() => {
         const cap = parseFloat(document.getElementById('cap').value) || 0;
         const tna = (parseFloat(document.getElementById('tna').value) || 0) / 100;
+        
+        // Obtener hora actual en Argentina
         const argNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }));
         document.getElementById('fecha-ar').innerText = argNow.toLocaleDateString('es-AR');
         document.getElementById('hora-ar').innerText = argNow.toLocaleTimeString('es-AR');
-        let diaria = (cap * tna / 365);
-        let segs = (argNow.getHours() * 3600) + (argNow.getMinutes() * 60) + argNow.getSeconds();
-        let acc = segs * (diaria / 86400);
-        document.getElementById('live-money').innerText = (cap + acc).toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 3 });
-        document.getElementById('acc-today').innerText = "+ $" + acc.toLocaleString('es-AR', {minimumFractionDigits: 2}) + " hoy";
+
+        // Definir la referencia: Hoy a las 5:00 AM
+        let ref5AM = new Date(argNow);
+        ref5AM.setHours(5, 0, 0, 0);
+
+        // Si la hora actual es antes de las 5 AM, la referencia de inicio fue ayer a las 5 AM
+        if (argNow < ref5AM) {
+            ref5AM.setDate(ref5AM.getDate() - 1);
+        }
+
+        // Segundos transcurridos desde el último pago (5 AM)
+        let diffSegundos = (argNow - ref5AM) / 1000;
+        
+        let gananciaDiaria = (cap * tna / 365);
+        let acumuladoHoy = diffSegundos * (gananciaDiaria / 86400);
+
+        // Actualizar UI
+        document.getElementById('live-money').innerText = (cap + acumuladoHoy).toLocaleString('es-AR', { 
+            style: 'currency', currency: 'ARS', minimumFractionDigits: 3 
+        });
+        document.getElementById('acc-today').innerText = "Ganado desde las 5AM: $" + acumuladoHoy.toLocaleString('es-AR', {minimumFractionDigits: 2});
     }, 1000);
 </script>
 </body>
