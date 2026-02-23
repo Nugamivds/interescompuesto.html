@@ -2,96 +2,142 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Monitor de Inversión - Argentina Time</title>
+    <title>Monitor de Inversión Manual - Argentina</title>
     <style>
-        :root { --p: #00ff88; --bg: #0f172a; --card: #1e293b; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; display: flex; justify-content: center; padding: 20px; }
-        .container { background: var(--card); padding: 30px; border-radius: 20px; width: 100%; max-width: 900px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; border: 1px solid #334155; }
-        h2 { grid-column: 1 / span 2; text-align: center; margin: 0; color: var(--p); text-transform: uppercase; letter-spacing: 2px; }
-        .input-section { display: flex; flex-direction: column; gap: 10px; background: #0f172a; padding: 20px; border-radius: 15px; }
-        input { background: #1e293b; border: 1px solid #334155; color: white; padding: 10px; border-radius: 8px; font-size: 16px; outline: none; }
-        input:focus { border-color: var(--p); }
-        .live-display { background: black; border-radius: 15px; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 2px solid var(--p); box-shadow: 0 0 20px rgba(0, 255, 136, 0.2); }
-        .live-label { font-size: 12px; color: var(--p); margin-bottom: 5px; }
-        .live-amount { font-family: 'Courier New', monospace; font-size: 35px; font-weight: bold; color: var(--p); }
-        .info-bar { grid-column: 1 / span 2; background: #334155; padding: 10px; border-radius: 10px; text-align: center; font-size: 13px; }
-        .sub-stats { font-size: 14px; color: #888; margin-top: 10px; text-align: center; }
+        :root { --p: #00ff88; --bg: #0b0f1a; --card: #161c2d; --accent: #38bdf8; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .container { background: var(--card); padding: 30px; border-radius: 20px; width: 100%; max-width: 480px; border: 1px solid #2d3748; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        h2 { text-align: center; margin-top: 0; color: var(--p); text-transform: uppercase; letter-spacing: 2px; font-size: 18px; }
+        
+        /* Monitor en vivo */
+        .live-display { background: #000; padding: 20px; border-radius: 15px; text-align: center; border: 1px solid var(--p); margin-bottom: 25px; }
+        .live-amount { font-family: 'Courier New', monospace; font-size: 32px; font-weight: bold; color: var(--p); }
+        
+        .section-title { font-size: 10px; color: var(--accent); text-transform: uppercase; margin-bottom: 10px; letter-spacing: 1px; border-bottom: 1px solid #2d3748; padding-bottom: 5px; }
+        .input-group { text-align: left; margin-bottom: 15px; }
+        label { font-size: 11px; color: #94a3b8; text-transform: uppercase; display: block; margin-bottom: 5px; }
+        input { width: 100%; padding: 12px; background: #0b0f1a; border: 1px solid #2d3748; color: white; border-radius: 10px; font-size: 18px; outline: none; box-sizing: border-box; }
+        input:focus { border-color: var(--accent); }
+
+        /* Panel de Inyección Manual */
+        .injection-panel { background: #1e293b; padding: 15px; border-radius: 12px; margin-bottom: 20px; }
+        .manual-inject { display: flex; gap: 10px; }
+        .manual-inject input { font-size: 16px; padding: 10px; }
+        .btn-add { background: var(--p); color: #0b0f1a; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; padding: 0 20px; transition: 0.2s; }
+        .btn-add:hover { filter: brightness(1.2); }
+
+        .projection-results { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px; border-top: 1px solid #2d3748; padding-top: 20px; }
+        .res-box { background: #0b0f1a; padding: 15px; border-radius: 12px; text-align: center; border: 1px solid #2d3748; }
+        .res-val { display: block; font-size: 16px; font-weight: bold; color: var(--accent); margin-top: 5px; }
+        
+        .info-footer { margin-top: 20px; font-size: 12px; color: #64748b; text-align: center; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Crecimiento en Vivo (Hora AR)</h2>
+    <h2>Mi Inversión</h2>
     
-    <div class="input-section">
-        <label>Capital Actual ($)</label>
-        <input type="number" id="cap" value="1272750" oninput="updateBase()">
-        <label>TNA (%)</label>
-        <input type="number" id="tna" value="32" oninput="updateBase()">
-        <p style="font-size: 11px; color: #94a3b8; margin-top: 10px;">
-            Sincronizado con zona horaria: <b>America/Argentina/Buenos_Aires</b>
-        </p>
+    <div class="live-display">
+        <div style="font-size: 10px; color: #888; margin-bottom: 5px;">SALDO + INTERÉS (ARG)</div>
+        <div id="live-money" class="live-amount">$ 0,00</div>
+        <div id="acc-today" style="font-size: 13px; color: var(--p); margin-top: 5px;">Ganado hoy: $0,00</div>
     </div>
 
-    <div class="live-display">
-        <div class="live-label">SALDO + INTERÉS AHORA</div>
-        <div id="live-money" class="live-amount">$ 0.00</div>
-        <div class="sub-stats">
-            <div id="daily-gain">Ganancia diaria: $0</div>
-            <div id="acc-today" style="color: var(--p); font-size: 12px; margin-top: 5px;">Ganado hoy: $0.00</div>
+    <div class="section-title">Inyectar Capital Manual</div>
+    <div class="injection-panel">
+        <div class="manual-inject">
+            <input type="number" id="manual_amount" placeholder="Escribe monto a sumar...">
+            <button class="btn-add" onclick="injectManual()">Sumar</button>
         </div>
     </div>
 
-    <div class="info-bar">
-        📅 Fecha y Hora AR: <span id="fecha-actual"></span>
+    <div class="section-title">Configuración de Tasa y Plazo</div>
+    <div class="input-group">
+        <label>Capital Base Actual ($)</label>
+        <input type="number" id="cap" value="1272750" oninput="updateAll()">
+    </div>
+    <div class="input-group">
+        <label>TNA (%)</label>
+        <input type="number" id="tna" value="32" oninput="updateAll()">
+    </div>
+    <div class="input-group">
+        <label>Proyectar a (Años)</label>
+        <input type="number" id="yrs" value="1" oninput="updateAll()">
+    </div>
+
+    <div class="projection-results">
+        <div class="res-box">
+            <span style="font-size: 10px; color: #94a3b8;">MONTO FINAL</span>
+            <span id="v_total" class="res-val">$ 0,00</span>
+        </div>
+        <div class="res-box">
+            <span style="font-size: 10px; color: #94a3b8;">GANANCIA TOTAL</span>
+            <span id="v_int" class="res-val">$ 0,00</span>
+        </div>
+    </div>
+
+    <div class="info-footer">
+        📅 <span id="fecha-ar"></span> | <span id="hora-ar"></span>
     </div>
 </div>
 
 <script>
-    let baseCapital = 0;
-    let tna = 0;
+    // Función para sumar cualquier monto al capital base
+    function injectManual() {
+        let val = parseFloat(document.getElementById('manual_amount').value) || 0;
+        let capInput = document.getElementById('cap');
+        if (val > 0) {
+            capInput.value = (parseFloat(capInput.value) || 0) + val;
+            document.getElementById('manual_amount').value = '';
+            updateAll();
+        }
+    }
 
-    function updateBase() {
-        baseCapital = parseFloat(document.getElementById('cap').value) || 0;
-        tna = (parseFloat(document.getElementById('tna').value) || 0) / 100;
-        
-        let diaria = (baseCapital * tna) / 365;
-        document.getElementById('daily-gain').innerText = "Ganancia diaria total: $" + diaria.toLocaleString('es-AR', {minimumFractionDigits: 2});
+    function updateAll() {
+        const cap = parseFloat(document.getElementById('cap').value) || 0;
+        const tna = (parseFloat(document.getElementById('tna').value) || 0) / 100;
+        const yrs = parseFloat(document.getElementById('yrs').value) || 0;
+
+        // Proyección Interés Compuesto Mensual
+        let meses = Math.floor(yrs * 12);
+        let saldoProy = cap;
+        let tasaMensual = tna / 12;
+
+        for (let i = 0; i < meses; i++) {
+            saldoProy += (saldoProy * tasaMensual);
+        }
+
+        const f = (n) => n.toLocaleString('es-AR', {style: 'currency', currency: 'ARS'});
+        document.getElementById('v_total').innerText = f(saldoProy);
+        document.getElementById('v_int').innerText = f(saldoProy - cap);
     }
 
     function tick() {
-        // Forzamos la obtención de la hora en Argentina
+        const cap = parseFloat(document.getElementById('cap').value) || 0;
+        const tna = (parseFloat(document.getElementById('tna').value) || 0) / 100;
+        
+        // Sincronización estricta con hora de Argentina
         const options = { timeZone: 'America/Argentina/Buenos_Aires', hour12: false };
-        const argNowStr = new Date().toLocaleString('en-US', options);
-        const argNow = new Date(argNowStr);
+        const argNow = new Date(new Date().toLocaleString('en-US', options));
 
-        // Mostrar fecha formateada para Argentina
-        document.getElementById('fecha-actual').innerText = new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
+        document.getElementById('fecha-ar').innerText = argNow.toLocaleDateString('es-AR');
+        document.getElementById('hora-ar').innerText = argNow.toLocaleTimeString('es-AR');
 
-        // Cálculo de ganancia por segundo (basado en 365 días)
-        let gananciaDiaria = (baseCapital * tna) / 365;
-        let gananciaPorSegundo = gananciaDiaria / 86400;
-        
-        // Segundos transcurridos hoy en Argentina
+        // Ganancia diaria (divisor 365 días)
+        let gananciaDiaria = (cap * tna) / 365;
         let segundosHoy = (argNow.getHours() * 3600) + (argNow.getMinutes() * 60) + argNow.getSeconds();
+        let acumuladoHoy = segundosHoy * (gananciaDiaria / 86400);
         
-        let acumuladoHoy = segundosHoy * gananciaPorSegundo;
-        let totalMomento = baseCapital + acumuladoHoy;
-        
-        // Actualizar visualización
-        document.getElementById('live-money').innerText = "$" + totalMomento.toLocaleString('es-AR', {
-            minimumFractionDigits: 4,
-            maximumFractionDigits: 4
+        // Saldo vivo + centavos por segundo
+        document.getElementById('live-money').innerText = (cap + acumuladoHoy).toLocaleString('es-AR', {
+            style: 'currency', currency: 'ARS', minimumFractionDigits: 4
         });
-        
-        document.getElementById('acc-today').innerText = "Has ganado hoy: $" + acumuladoHoy.toLocaleString('es-AR', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        });
+        document.getElementById('acc-today').innerText = "Ganado hoy: $" + acumuladoHoy.toLocaleString('es-AR', {minimumFractionDigits: 2});
     }
 
-    updateBase();
-    setInterval(tick, 1000); 
+    setInterval(tick, 1000);
+    updateAll();
     tick();
 </script>
 
