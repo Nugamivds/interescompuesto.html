@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inversión Gold - Ciclo 5AM</title>
+    <title>Inversión Gold - Ciclo 5AM Exacto</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { --p: #00ff88; --bg: #0b0f1a; --card: #161c2d; --accent: #38bdf8; }
@@ -28,20 +28,21 @@
         .res-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
         .res-box { background: #0b0f1a; padding: 10px; border-radius: 10px; text-align: center; border: 1px solid #2d3748; }
         .footer { text-align: center; font-size: 11px; color: #64748b; border-top: 1px solid #2d3748; padding-top: 10px; }
+        .timer-info { font-size: 10px; color: #aaa; margin-top: 8px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Inversión Gold <span style="font-size: 10px; vertical-align: middle; opacity: 0.5;">Ciclo 05:00 AM</span></h2>
+    <h2>Inversión Gold <span style="font-size: 10px; opacity: 0.5;">Control 5AM</span></h2>
     
     <div class="main-content">
         <div class="controls-side">
             <div class="live-display">
                 <div id="sync-indicator" class="status-dot"></div>
                 <div id="live-money" class="live-amount">$ 0,00</div>
-                <div id="acc-today" style="font-size: 14px; color: var(--p); margin-top: 5px;">Cargando...</div>
-                <div style="font-size: 10px; color: #555; margin-top: 5px;">Próximo pago: Mañana 05:00 AM</div>
+                <div id="acc-today" style="font-size: 14px; color: var(--p); margin-top: 5px;">Calculando ciclo...</div>
+                <div id="timer-msg" class="timer-info">Sincronizando con 5 AM...</div>
             </div>
 
             <div class="section-title">Inyección Manual</div>
@@ -59,11 +60,11 @@
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                 <div><label style="font-size: 10px;">TNA %</label><input type="number" id="tna" onchange="saveData()"></div>
-                <div><label style="font-size: 10px;">Años Proyectados</label><input type="number" id="yrs" onchange="saveData()"></div>
+                <div><label style="font-size: 10px;">Años</label><input type="number" id="yrs" onchange="saveData()"></div>
             </div>
 
             <div class="res-grid">
-                <div class="res-box"><span style="font-size: 9px; color: #888;">VALOR FINAL</span><span id="v_total" style="color:var(--accent); font-weight:bold;">$ 0</span></div>
+                <div class="res-box"><span style="font-size: 9px; color: #888;">FINAL</span><span id="v_total" style="color:var(--accent); font-weight:bold;">$ 0</span></div>
                 <div class="res-box"><span style="font-size: 9px; color: #888;">GANANCIA</span><span id="v_int" style="color:var(--accent); font-weight:bold;">$ 0</span></div>
             </div>
         </div>
@@ -71,7 +72,7 @@
         <div class="chart-container"><canvas id="myChart"></canvas></div>
     </div>
 
-    <div class="footer">📅 <span id="fecha-ar"></span> | <span id="hora-ar"></span></div>
+    <div class="footer">📅 <span id="fecha-ar"></span> | <span id="hora-ar"></span> | Argentina</div>
 </div>
 
 <script type="module">
@@ -132,24 +133,18 @@
         const apo = parseFloat(document.getElementById('apo_mensual').value) || 0;
         const tna = (parseFloat(document.getElementById('tna').value) || 0) / 100;
         const yrs = parseFloat(document.getElementById('yrs').value) || 0;
-
         let meses = Math.floor(yrs * 12) || 1;
         let saldo = cap;
         let tasaM = tna / 12;
-        let labels = ["Inicio"];
-        let dataTotal = [cap];
-        let dataPuro = [cap];
-
+        let labels = ["Inicio"], dataTotal = [cap], dataPuro = [cap];
         for (let i = 1; i <= meses; i++) {
             saldo = (saldo + apo) * (1 + tasaM);
             dataTotal.push(saldo);
             dataPuro.push(cap + (apo * i));
             labels.push("M" + i);
         }
-
         document.getElementById('v_total').innerText = saldo.toLocaleString('es-AR', {style:'currency', currency:'ARS'});
         document.getElementById('v_int').innerText = (saldo - (cap + apo * meses)).toLocaleString('es-AR', {style:'currency', currency:'ARS'});
-        
         drawChart(labels, dataTotal, dataPuro);
     }
 
@@ -168,36 +163,42 @@
         });
     }
 
-    // RELOJ Y LÓGICA DE 5 AM
+    // RELOJ CON LÓGICA DE CICLO 5AM
     setInterval(() => {
         const cap = parseFloat(document.getElementById('cap').value) || 0;
         const tna = (parseFloat(document.getElementById('tna').value) || 0) / 100;
         
-        // Obtener hora actual en Argentina
         const argNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }));
         document.getElementById('fecha-ar').innerText = argNow.toLocaleDateString('es-AR');
         document.getElementById('hora-ar').innerText = argNow.toLocaleTimeString('es-AR');
 
-        // Definir la referencia: Hoy a las 5:00 AM
-        let ref5AM = new Date(argNow);
-        ref5AM.setHours(5, 0, 0, 0);
+        // Determinamos el inicio del ciclo actual (las 5 AM más cercanas en el pasado)
+        let inicioCiclo = new Date(argNow);
+        inicioCiclo.setHours(5, 0, 0, 0);
 
-        // Si la hora actual es antes de las 5 AM, la referencia de inicio fue ayer a las 5 AM
-        if (argNow < ref5AM) {
-            ref5AM.setDate(ref5AM.getDate() - 1);
+        // Si son las 00:38, las 5 AM de hoy todavía no pasaron, 
+        // así que el ciclo empezó a las 5 AM de AYER.
+        if (argNow < inicioCiclo) {
+            inicioCiclo.setDate(inicioCiclo.getDate() - 1);
         }
 
-        // Segundos transcurridos desde el último pago (5 AM)
-        let diffSegundos = (argNow - ref5AM) / 1000;
-        
-        let gananciaDiaria = (cap * tna / 365);
-        let acumuladoHoy = diffSegundos * (gananciaDiaria / 86400);
+        // Calculamos cuánto tiempo pasó desde que empezó el ciclo
+        let segundosTranscurridos = (argNow - inicioCiclo) / 1000;
+        let gananciaDiariaTotal = (cap * tna / 365);
+        let acumuladoHoy = segundosTranscurridos * (gananciaDiariaTotal / 86400);
 
         // Actualizar UI
         document.getElementById('live-money').innerText = (cap + acumuladoHoy).toLocaleString('es-AR', { 
             style: 'currency', currency: 'ARS', minimumFractionDigits: 3 
         });
-        document.getElementById('acc-today').innerText = "Ganado desde las 5AM: $" + acumuladoHoy.toLocaleString('es-AR', {minimumFractionDigits: 2});
+        
+        document.getElementById('acc-today').innerText = "Acumulado p/ cobrar: $" + acumuladoHoy.toLocaleString('es-AR', {minimumFractionDigits: 2});
+        
+        // Mensaje informativo del próximo reinicio
+        let proxPago = new Date(inicioCiclo);
+        proxPago.setDate(proxPago.getDate() + 1);
+        document.getElementById('timer-msg').innerText = "Próximo pago: Hoy a las 05:00 AM";
+        
     }, 1000);
 </script>
 </body>
