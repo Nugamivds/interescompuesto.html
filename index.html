@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Inversión Gold - Capital & Nube</title>
+    <title>Inversión Gold - Interés Diario Auto</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
@@ -34,14 +34,20 @@
         .diario-card { background: #000; border: 1px solid var(--gold); padding: 10px; border-radius: 10px; text-align: center; margin: 10px 0; }
         .diario-card div { font-size: 26px; font-weight: bold; color: #ffd700; }
         
-        .chart-container { height: 400px; width: 100%; background: rgba(0,0,0,0.5); border-radius: 10px; padding: 10px; box-sizing: border-box; }
+        .chart-container { height: 300px; width: 100%; background: rgba(0,0,0,0.5); border-radius: 10px; padding: 10px; box-sizing: border-box; }
+        .metas-container { max-height: 300px; overflow-y: auto; background: rgba(0,0,0,0.6); border-radius: 10px; font-size: 13px; border: 1px solid rgba(212, 175, 55, 0.2); }
+        table { width: 100%; border-collapse: collapse; }
+        td { padding: 8px 12px; border-bottom: 1px solid rgba(212,175,55,0.05); color: #888; }
+        .meta-tachada { text-decoration: line-through; color: #444; opacity: 0.6; }
+        .meta-current { color: #ffd700; background: rgba(212, 175, 55, 0.2); font-weight: bold; text-decoration: none !important; }
+        .meta-next { color: #bbb; }
     </style>
 </head>
 <body>
 <div class="overlay"></div>
 <div class="container">
     <div class="panel">
-        <div id="syncStatus" class="status-bar">● CONECTADO</div>
+        <div id="syncStatus" class="status-bar">● CONECTADO - BUSCANDO INTERESES...</div>
         <h2>💰 MOVIMIENTOS</h2>
         
         <label>INYECTAR CAPITAL ($)</label>
@@ -63,6 +69,9 @@
             <small style="color:var(--gold)">GANANCIA DIARIA ACTUAL</small>
             <div id="rentaDiaria">$ 0</div>
         </div>
+
+        <h2>🏆 ESCALA DE METAS</h2>
+        <div class="metas-container"><table><tbody id="tablaMetas"></tbody></table></div>
     </div>
 
     <div class="panel">
@@ -90,6 +99,7 @@
     const db = firebase.database();
     let grafico;
 
+    // ESCUCHA PRINCIPAL DE FIREBASE
     db.ref('miInversion').on('value', (snapshot) => {
         const val = snapshot.val();
         if (val) {
@@ -100,20 +110,35 @@
     function verificarYActualizarIntereses(data) {
         const hoy = new Date();
         hoy.setHours(0,0,0,0);
+        
         const ultimaActualizacion = data.lastUpdate ? new Date(data.lastUpdate) : hoy;
         ultimaActualizacion.setHours(0,0,0,0);
-        const diffDias = Math.floor((hoy - ultimaActualizacion) / (1000 * 60 * 60 * 24));
+
+        // Diferencia en días
+        const diffTiempo = hoy - ultimaActualizacion;
+        const diffDias = Math.floor(diffTiempo / (1000 * 60 * 60 * 24));
 
         if (diffDias > 0) {
+            // Calcular interés diario (Interés Compuesto Diario)
             const tDiaria = (data.tna / 100) / 365;
             let nuevoCap = data.cap;
-            for(let d = 0; d < diffDias; d++) { nuevoCap += (nuevoCap * tDiaria); }
-            db.ref('miInversion').update({ cap: nuevoCap, lastUpdate: hoy.getTime() });
+
+            for(let d = 0; d < diffDias; d++) {
+                nuevoCap += (nuevoCap * tDiaria);
+            }
+
+            // Guardar el nuevo capital y la fecha de hoy
+            db.ref('miInversion').update({
+                cap: nuevoCap,
+                lastUpdate: hoy.getTime()
+            });
+            document.getElementById('syncStatus').innerText = `● INTERÉS DE ${diffDias} DÍAS SUMADO`;
         } else {
             document.getElementById('cap').value = data.cap;
             document.getElementById('apo').value = data.apo;
             document.getElementById('tna').value = data.tna;
             document.getElementById('yrs').value = data.yrs;
+            document.getElementById('syncStatus').innerText = "● AL DÍA - SINCRONIZADO";
             actualizarCalculosVisuales(false);
         }
     }
@@ -126,7 +151,7 @@
             apo: parseFloat(document.getElementById('apo').value) || 0,
             tna: parseFloat(document.getElementById('tna').value) || 0,
             yrs: parseFloat(document.getElementById('yrs').value) || 0,
-            lastUpdate: hoy.getTime()
+            lastUpdate: hoy.getTime() // Se resetea la fecha al editar manualmente
         };
         db.ref('miInversion').set(datos);
     }
@@ -146,14 +171,20 @@
         const apo = parseFloat(document.getElementById('apo').value) || 0;
         const tna = parseFloat(document.getElementById('tna').value) || 0;
         const yrs = parseFloat(document.getElementById('yrs').value) || 0;
+
         if(debeSubir) subirANube();
 
         const tMensual = (tna / 100) / 12;
         const tDiaria = (tna / 100) / 365;
         const meses = Math.floor(yrs * 12);
-        
-        document.getElementById('rentaDiaria').innerText = (cap * tDiaria).toLocaleString('es-AR', {style:'currency', currency:'ARS'});
+        const rentaActualDiaria = cap * tDiaria;
 
+        document.getElementById('rentaDiaria').innerText = rentaActualDiaria.toLocaleString('es-AR', {style:'currency', currency:'ARS'});
+
+        let metas = [];
+        for(let m = 100; m <= 10000; m += 100) { metas.push(m); }
+
+        let metasLogradasMapping = {};
         let labels = [], dataTotal = [], dataInv = [], dataInt = [];
         let saldo = cap, inv = cap;
 
@@ -163,8 +194,25 @@
             dataTotal.push(saldo);
             dataInv.push(inv);
             dataInt.push(saldo - inv);
+            let rDiariaProyectada = saldo * tDiaria;
+            metas.forEach(m => {
+                if (!metasLogradasMapping[m] && rDiariaProyectada >= m) {
+                    metasLogradasMapping[m] = (i === 0) ? "Ok" : "M" + i;
+                }
+            });
         }
 
+        let html = "";
+        let metaMasLograda = 0;
+        metas.forEach(m => { if(rentaActualDiaria >= m) metaMasLograda = m; });
+
+        metas.forEach(m => {
+            let info = metasLogradasMapping[m] || "--";
+            let clase = (m < metaMasLograda) ? "meta-tachada" : (m === metaMasLograda ? "meta-current" : "meta-next");
+            html += `<tr class="${clase}"><td>$${m.toLocaleString()}</td><td align="right">${info}</td></tr>`;
+        });
+        
+        document.getElementById('tablaMetas').innerHTML = html;
         document.getElementById('resTotal').innerText = saldo.toLocaleString('es-AR', {style:'currency', currency:'ARS'});
         document.getElementById('resInt').innerText = (saldo-inv).toLocaleString('es-AR', {style:'currency', currency:'ARS'});
         renderGrafico(labels, dataTotal, dataInv, dataInt);
@@ -183,8 +231,7 @@
                     { label: 'INTERÉS', data: int, borderColor: '#39ff14', borderWidth: 2, pointRadius: 0, tension: 0.3 }
                 ]
             },
-            options: { 
-                responsive: true, maintainAspectRatio: false,
+            options: { responsive: true, maintainAspectRatio: false,
                 plugins: { legend: { labels: { color: '#d4af37', font: { size: 9 } } } },
                 scales: { 
                     x: { ticks: { color: '#d4af37', font: { size: 8 } }, grid: { display: false } },
