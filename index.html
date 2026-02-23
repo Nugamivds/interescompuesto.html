@@ -2,244 +2,85 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Inversión Gold - Interés Diario Auto</title>
-    
-    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
+    <title>Monitor de Inversión 365</title>
     <style>
-        :root { --gold: #d4af37; --gold-light: #f7ef8a; --dark-panel: rgba(10, 10, 10, 0.95); }
-        body { 
-            margin: 0; padding: 10px; font-family: 'Segoe UI', sans-serif; 
-            background: url('https://c1.wallpaperflare.com/preview/489/364/872/dollars-money-us-dollars-cash.jpg') no-repeat center center fixed;
-            background-size: cover; color: white; min-height: 100vh;
-        }
-        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: -1; }
-        .container { max-width: 1200px; margin: auto; display: grid; grid-template-columns: 1fr; gap: 20px; }
-        @media (min-width: 850px) { .container { grid-template-columns: 380px 1fr; } }
-        
-        .panel { background: var(--dark-panel); padding: 20px; border-radius: 15px; border: 1px solid var(--gold); box-shadow: 0 0 20px rgba(212, 175, 55, 0.2); }
-        h2 { color: var(--gold); text-align: center; font-size: 16px; border-bottom: 1px solid var(--gold); padding-bottom: 8px; margin-top: 0; }
-        label { display: block; font-size: 10px; font-weight: bold; color: var(--gold); margin-bottom: 3px; }
-        input { width: 100%; padding: 10px; background: #000; border: 1px solid var(--gold); border-radius: 8px; color: #ffd700; font-size: 16px; box-sizing: border-box; margin-bottom: 10px; }
-        
-        .btn-inject { 
-            width: 100%; background: linear-gradient(45deg, #b8860b, var(--gold-light), var(--gold)); 
-            color: #000; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; text-transform: uppercase;
-        }
-
-        .status-bar { font-size: 9px; text-align: center; color: #39ff14; margin-bottom: 10px; letter-spacing: 1px; }
-        .diario-card { background: #000; border: 1px solid var(--gold); padding: 10px; border-radius: 10px; text-align: center; margin: 10px 0; }
-        .diario-card div { font-size: 26px; font-weight: bold; color: #ffd700; }
-        
-        .chart-container { height: 300px; width: 100%; background: rgba(0,0,0,0.5); border-radius: 10px; padding: 10px; box-sizing: border-box; }
-        .metas-container { max-height: 300px; overflow-y: auto; background: rgba(0,0,0,0.6); border-radius: 10px; font-size: 13px; border: 1px solid rgba(212, 175, 55, 0.2); }
-        table { width: 100%; border-collapse: collapse; }
-        td { padding: 8px 12px; border-bottom: 1px solid rgba(212,175,55,0.05); color: #888; }
-        .meta-tachada { text-decoration: line-through; color: #444; opacity: 0.6; }
-        .meta-current { color: #ffd700; background: rgba(212, 175, 55, 0.2); font-weight: bold; text-decoration: none !important; }
-        .meta-next { color: #bbb; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0b0f1a; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .card { background: #161c2d; padding: 30px; border-radius: 20px; width: 450px; border: 1px solid #2d3748; text-align: center; }
+        .live-val { font-family: monospace; font-size: 38px; color: #4ade80; margin: 15px 0; font-weight: bold; }
+        .input-group { margin-top: 20px; text-align: left; background: #0b0f1a; padding: 15px; border-radius: 12px; }
+        input { width: 100%; padding: 10px; background: #161c2d; border: 1px solid #2d3748; color: white; border-radius: 8px; margin-bottom: 10px; font-size: 16px; box-sizing: border-box; }
+        .stats { margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .stat-box { background: #1e293b; padding: 10px; border-radius: 8px; }
+        .stat-val { display: block; font-size: 16px; font-weight: bold; color: #4ade80; }
+        .btn-add { background: transparent; color: #4ade80; border: 1px solid #4ade80; padding: 8px; border-radius: 6px; cursor: pointer; font-size: 12px; margin: 5px; transition: 0.3s; }
+        .btn-add:hover { background: #4ade80; color: #0b0f1a; }
     </style>
 </head>
 <body>
-<div class="overlay"></div>
-<div class="container">
-    <div class="panel">
-        <div id="syncStatus" class="status-bar">● CONECTADO - BUSCANDO INTERESES...</div>
-        <h2>💰 MOVIMIENTOS</h2>
-        
-        <label>INYECTAR CAPITAL ($)</label>
-        <input type="number" id="montoInyectar" placeholder="Ej: 5000">
-        <button class="btn-inject" onclick="inyectar()">Sumar al Capital</button>
-        
-        <div style="margin-top: 15px;">
-            <label>CAPITAL ACTUAL ($)</label>
-            <input type="number" id="cap" oninput="subirANube()">
-            <label>APORTE MENSUAL ($)</label>
-            <input type="number" id="apo" oninput="subirANube()">
-            <label>TASA ANUAL (TNA %)</label>
-            <input type="number" id="tna" oninput="subirANube()">
-            <label>PLAZO (AÑOS)</label>
-            <input type="number" id="yrs" oninput="subirANube()">
-        </div>
 
-        <div class="diario-card">
-            <small style="color:var(--gold)">GANANCIA DIARIA ACTUAL</small>
-            <div id="rentaDiaria">$ 0</div>
-        </div>
+<div class="card">
+    <div style="font-size: 12px; color: #94a3b8; text-transform: uppercase;">Saldo Actualizado (365 días)</div>
+    <div class="live-val" id="total">$ 0.00</div>
+    
+    <div id="reloj" style="font-size: 13px; color: #64748b; margin-bottom: 10px;"></div>
 
-        <h2>🏆 ESCALA DE METAS</h2>
-        <div class="metas-container"><table><tbody id="tablaMetas"></tbody></table></div>
+    <div class="input-group">
+        <label style="font-size: 12px; color: #64748b;">Capital Invertido ($)</label>
+        <input type="number" id="cap" value="1272750" oninput="calc()">
+        
+        <label style="font-size: 12px; color: #64748b;">TNA (%)</label>
+        <input type="number" id="tna" value="32" oninput="calc()">
+        
+        <div style="text-align: center; margin-top: 5px;">
+            <button class="btn-add" onclick="add(1000)">+1.000</button>
+            <button class="btn-add" onclick="add(3000)">+3.000</button>
+            <button class="btn-add" onclick="add(10000)">+10.000</button>
+        </div>
     </div>
 
-    <div class="panel">
-        <h2>📈 PROYECCIÓN DE RIQUEZA</h2>
-        <div class="chart-container"><canvas id="miGrafico"></canvas></div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
-            <div class="diario-card"><small style="font-size:9px">TOTAL FINAL</small><div id="resTotal" style="font-size: 18px;"></div></div>
-            <div class="diario-card"><small style="font-size:9px">INTERESES NETOS</small><div id="resInt" style="font-size: 18px;"></div></div>
+    <div class="stats">
+        <div class="stat-box">
+            <span style="font-size: 10px; color: #94a3b8;">GANANCIA DIARIA</span>
+            <span id="ganado-hoy-total" class="stat-val">$ 1.115,84</span>
+        </div>
+        <div class="stat-box">
+            <span style="font-size: 10px; color: #94a3b8;">GANADO AHORA</span>
+            <span id="ganado-momento" class="stat-val">$ 0.00</span>
         </div>
     </div>
 </div>
 
 <script>
-    const firebaseConfig = {
-        apiKey: "AIzaSyBUKbTIfmFklM_Y059j-kKD8Q-L6o2lYs8",
-        authDomain: "inversiongold-2c5c7.firebaseapp.com",
-        databaseURL: "https://inversiongold-2c5c7-default-rtdb.firebaseio.com",
-        projectId: "inversiongold-2c5c7",
-        storageBucket: "inversiongold-2c5c7.firebasestorage.app",
-        messagingSenderId: "826689789700",
-        appId: "1:826689789700:web:36c95e7f9b9e57d8b13a51"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    let grafico;
-
-    // ESCUCHA PRINCIPAL DE FIREBASE
-    db.ref('miInversion').on('value', (snapshot) => {
-        const val = snapshot.val();
-        if (val) {
-            verificarYActualizarIntereses(val);
-        }
-    });
-
-    function verificarYActualizarIntereses(data) {
-        const hoy = new Date();
-        hoy.setHours(0,0,0,0);
-        
-        const ultimaActualizacion = data.lastUpdate ? new Date(data.lastUpdate) : hoy;
-        ultimaActualizacion.setHours(0,0,0,0);
-
-        // Diferencia en días
-        const diffTiempo = hoy - ultimaActualizacion;
-        const diffDias = Math.floor(diffTiempo / (1000 * 60 * 60 * 24));
-
-        if (diffDias > 0) {
-            // Calcular interés diario (Interés Compuesto Diario)
-            const tDiaria = (data.tna / 100) / 365;
-            let nuevoCap = data.cap;
-
-            for(let d = 0; d < diffDias; d++) {
-                nuevoCap += (nuevoCap * tDiaria);
-            }
-
-            // Guardar el nuevo capital y la fecha de hoy
-            db.ref('miInversion').update({
-                cap: nuevoCap,
-                lastUpdate: hoy.getTime()
-            });
-            document.getElementById('syncStatus').innerText = `● INTERÉS DE ${diffDias} DÍAS SUMADO`;
-        } else {
-            document.getElementById('cap').value = data.cap;
-            document.getElementById('apo').value = data.apo;
-            document.getElementById('tna').value = data.tna;
-            document.getElementById('yrs').value = data.yrs;
-            document.getElementById('syncStatus').innerText = "● AL DÍA - SINCRONIZADO";
-            actualizarCalculosVisuales(false);
-        }
+    function add(n) {
+        let el = document.getElementById('cap');
+        el.value = parseFloat(el.value) + n;
+        calc();
     }
 
-    function subirANube() {
-        const hoy = new Date();
-        hoy.setHours(0,0,0,0);
-        const datos = {
-            cap: parseFloat(document.getElementById('cap').value) || 0,
-            apo: parseFloat(document.getElementById('apo').value) || 0,
-            tna: parseFloat(document.getElementById('tna').value) || 0,
-            yrs: parseFloat(document.getElementById('yrs').value) || 0,
-            lastUpdate: hoy.getTime() // Se resetea la fecha al editar manualmente
-        };
-        db.ref('miInversion').set(datos);
-    }
-
-    function inyectar() {
-        const extra = parseFloat(document.getElementById('montoInyectar').value) || 0;
-        const actual = parseFloat(document.getElementById('cap').value) || 0;
-        if(extra > 0) {
-            document.getElementById('cap').value = actual + extra;
-            document.getElementById('montoInyectar').value = "";
-            subirANube();
-        }
-    }
-
-    function actualizarCalculosVisuales(debeSubir = true) {
+    function calc() {
         const cap = parseFloat(document.getElementById('cap').value) || 0;
-        const apo = parseFloat(document.getElementById('apo').value) || 0;
-        const tna = parseFloat(document.getElementById('tna').value) || 0;
-        const yrs = parseFloat(document.getElementById('yrs').value) || 0;
-
-        if(debeSubir) subirANube();
-
-        const tMensual = (tna / 100) / 12;
-        const tDiaria = (tna / 100) / 365;
-        const meses = Math.floor(yrs * 12);
-        const rentaActualDiaria = cap * tDiaria;
-
-        document.getElementById('rentaDiaria').innerText = rentaActualDiaria.toLocaleString('es-AR', {style:'currency', currency:'ARS'});
-
-        let metas = [];
-        for(let m = 100; m <= 10000; m += 100) { metas.push(m); }
-
-        let metasLogradasMapping = {};
-        let labels = [], dataTotal = [], dataInv = [], dataInt = [];
-        let saldo = cap, inv = cap;
-
-        for (let i = 0; i <= meses; i++) {
-            if (i > 0) { inv += apo; saldo += apo; saldo += (saldo * tMensual); }
-            labels.push("M" + i);
-            dataTotal.push(saldo);
-            dataInv.push(inv);
-            dataInt.push(saldo - inv);
-            let rDiariaProyectada = saldo * tDiaria;
-            metas.forEach(m => {
-                if (!metasLogradasMapping[m] && rDiariaProyectada >= m) {
-                    metasLogradasMapping[m] = (i === 0) ? "Ok" : "M" + i;
-                }
-            });
-        }
-
-        let html = "";
-        let metaMasLograda = 0;
-        metas.forEach(m => { if(rentaActualDiaria >= m) metaMasLograda = m; });
-
-        metas.forEach(m => {
-            let info = metasLogradasMapping[m] || "--";
-            let clase = (m < metaMasLograda) ? "meta-tachada" : (m === metaMasLograda ? "meta-current" : "meta-next");
-            html += `<tr class="${clase}"><td>$${m.toLocaleString()}</td><td align="right">${info}</td></tr>`;
-        });
+        const tna = (parseFloat(document.getElementById('tna').value) || 0) / 100;
+        const now = new Date();
         
-        document.getElementById('tablaMetas').innerHTML = html;
-        document.getElementById('resTotal').innerText = saldo.toLocaleString('es-AR', {style:'currency', currency:'ARS'});
-        document.getElementById('resInt').innerText = (saldo-inv).toLocaleString('es-AR', {style:'currency', currency:'ARS'});
-        renderGrafico(labels, dataTotal, dataInv, dataInt);
+        // Uso de divisor estándar de 365 días
+        const diaria = (cap * tna) / 365; 
+        const porSegundo = diaria / 86400;
+
+        const segundosHoy = (now.getHours() * 3600) + (now.getMinutes() * 60) + now.getSeconds();
+        const acumuladoAhora = segundosHoy * porSegundo;
+
+        document.getElementById('reloj').innerText = now.toLocaleString('es-AR');
+        document.getElementById('total').innerText = "$" + (cap + acumuladoAhora).toLocaleString('es-AR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+        document.getElementById('ganado-hoy-total').innerText = "$" + diaria.toLocaleString('es-AR', {minimumFractionDigits: 2});
+        document.getElementById('ganado-momento').innerText = "$" + acumuladoAhora.toLocaleString('es-AR', {minimumFractionDigits: 2});
     }
 
-    function renderGrafico(labels, total, inv, int) {
-        const ctx = document.getElementById('miGrafico').getContext('2d');
-        if (grafico) grafico.destroy();
-        grafico = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [
-                    { label: 'TOTAL', data: total, borderColor: '#d4af37', borderWidth: 3, pointRadius: 0, tension: 0.3 },
-                    { label: 'CAPITAL', data: inv, borderColor: '#ffffff', borderWidth: 2, borderDash: [5,5], pointRadius: 0 },
-                    { label: 'INTERÉS', data: int, borderColor: '#39ff14', borderWidth: 2, pointRadius: 0, tension: 0.3 }
-                ]
-            },
-            options: { responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { labels: { color: '#d4af37', font: { size: 9 } } } },
-                scales: { 
-                    x: { ticks: { color: '#d4af37', font: { size: 8 } }, grid: { display: false } },
-                    y: { ticks: { color: '#d4af37', font: { size: 8 } }, grid: { color: 'rgba(212,175,55,0.1)' } }
-                }
-            }
-        });
-    }
+    setInterval(calc, 1000);
+    calc();
 </script>
+
 </body>
 </html>
