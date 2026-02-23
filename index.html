@@ -5,96 +5,185 @@
     <title>Inversión Gold - Control Manual</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --gold: #d4af37; --gold-light: #f7ef8a; --dark: #0a0a0a; }
+        :root {
+            --gold: #d4af37;
+            --gold-light: #f7ef8a;
+            --dark-panel: rgba(15, 15, 15, 0.95);
+        }
+
         body { 
-            margin: 0; padding: 20px; font-family: 'Segoe UI', sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            font-family: 'Segoe UI', sans-serif; 
             background: url('https://c1.wallpaperflare.com/preview/489/364/872/dollars-money-us-dollars-cash.jpg') no-repeat center center fixed;
-            background-size: cover; color: white; min-height: 100vh;
+            background-size: cover;
+            color: white;
+            min-height: 100vh;
         }
-        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: -1; }
-        .container { max-width: 1200px; margin: auto; display: grid; grid-template-columns: 380px 1fr; gap: 20px; }
-        .panel { background: rgba(15, 15, 15, 0.95); padding: 25px; border-radius: 20px; border: 2px solid var(--gold); box-shadow: 0 0 30px rgba(212, 175, 55, 0.2); backdrop-filter: blur(10px); }
-        h2 { color: var(--gold); text-align: center; text-transform: uppercase; font-size: 18px; border-bottom: 1px solid var(--gold); padding-bottom: 10px; margin-bottom: 20px; }
-        label { display: block; font-size: 11px; font-weight: bold; color: var(--gold); margin-bottom: 5px; }
-        input { width: 100%; padding: 12px; background: #111; border: 1px solid var(--gold); border-radius: 8px; color: #ffd700; font-size: 18px; margin-bottom: 15px; box-sizing: border-box; }
-        
-        .inject-container { background: rgba(212, 175, 55, 0.1); padding: 20px; border-radius: 15px; border: 1px solid var(--gold); margin-bottom: 20px; }
-        .btn-main { 
-            width: 100%; background: linear-gradient(45deg, #b8860b, var(--gold-light), var(--gold)); 
-            color: #000; border: none; padding: 15px; border-radius: 10px; font-weight: bold; 
-            cursor: pointer; text-transform: uppercase; transition: 0.3s; box-shadow: 0 4px 15px rgba(212,175,55,0.3);
+
+        .overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            z-index: -1;
         }
-        .btn-main:hover { transform: translateY(-2px); filter: brightness(1.1); }
+
+        .container { 
+            max-width: 1200px; 
+            margin: auto; 
+            display: grid; 
+            grid-template-columns: 380px 1fr; 
+            gap: 25px; 
+        }
+
+        .panel { 
+            background: var(--dark-panel); 
+            padding: 25px; 
+            border-radius: 20px; 
+            border: 2px solid var(--gold);
+            box-shadow: 0 0 40px rgba(212, 175, 55, 0.2);
+            backdrop-filter: blur(5px);
+        }
+
+        h2 { 
+            color: var(--gold); 
+            text-align: center; 
+            text-transform: uppercase; 
+            letter-spacing: 2px;
+            margin-top: 0;
+            border-bottom: 2px solid var(--gold);
+            padding-bottom: 10px;
+            text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+        }
+
+        label { display: block; font-size: 11px; font-weight: bold; color: var(--gold); margin-bottom: 5px; text-transform: uppercase; }
+
+        input { 
+            width: 100%; 
+            padding: 12px; 
+            background: #111;
+            border: 1px solid var(--gold); 
+            border-radius: 8px; 
+            color: #ffd700; 
+            font-size: 18px; 
+            outline: none;
+            box-sizing: border-box;
+            margin-bottom: 15px;
+        }
+
+        .btn-inject { 
+            width: 100%;
+            background: linear-gradient(45deg, #b8860b, var(--gold-light), var(--gold));
+            color: #000;
+            border: none;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 0 5px 20px rgba(212, 175, 55, 0.4);
+            transition: 0.3s;
+        }
+
+        .btn-inject:hover { transform: scale(1.02); filter: brightness(1.1); }
+
+        .diario-card { 
+            background: #000;
+            border: 1px solid var(--gold);
+            padding: 15px; 
+            border-radius: 12px; 
+            text-align: center; 
+            margin-bottom: 20px; 
+        }
         
-        .card-info { background: #000; border: 1px solid var(--gold); padding: 15px; border-radius: 12px; text-align: center; margin-bottom: 15px; }
-        .card-info div { font-size: 32px; font-weight: bold; color: #ffd700; text-shadow: 0 0 10px var(--gold); }
-        
-        .printer-box { background: rgba(0,0,0,0.5); border-left: 4px solid var(--gold); padding: 15px; border-radius: 5px; margin-top: 15px; }
+        .diario-card div { font-size: 34px; font-weight: bold; color: #ffd700; text-shadow: 0 0 15px var(--gold); }
+
+        .metas-container { 
+            max-height: 250px; 
+            overflow-y: auto; 
+            background: rgba(0,0,0,0.6);
+            border-radius: 10px;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+        td, th { padding: 12px; text-align: left; border-bottom: 1px solid rgba(212,175,55,0.2); font-size: 14px; }
+        .meta-ok { color: #ffd700; background: rgba(212, 175, 55, 0.2); font-weight: bold; }
     </style>
 </head>
 <body>
+
 <div class="overlay"></div>
+
 <div class="container">
     <div class="panel">
         <h2>💰 MOVIMIENTOS</h2>
         
-        <div class="inject-container">
-            <label>MONTO PERSONALIZADO A INYECTAR ($)</label>
-            <input type="number" id="montoManual" placeholder="Ingresa el monto...">
-            <button class="btn-main" onclick="inyectarManual()">SUMAR AL CAPITAL</button>
+        <label>MONTO A INYECTAR ($)</label>
+        <input type="number" id="montoInyectar" placeholder="Ingresa monto personalizado...">
+        <button class="btn-inject" onclick="inyectar()">SUMAR AL CAPITAL</button>
+        
+        <div style="margin-top: 25px;">
+            <label>CAPITAL INICIAL / ACTUAL ($)</label>
+            <input type="number" id="cap" oninput="actualizar()">
+            
+            <label>APORTE MENSUAL FIJO ($)</label>
+            <input type="number" id="apo" oninput="actualizar()">
+            
+            <label>TASA ANUAL (TNA %)</label>
+            <input type="number" id="tna" oninput="actualizar()">
+            
+            <label>PLAZO (AÑOS)</label>
+            <input type="number" id="yrs" oninput="actualizar()">
         </div>
 
-        <label>CAPITAL TOTAL ACUMULADO ($)</label>
-        <input type="number" id="cap" oninput="actualizar()">
-        <label>APORTE MENSUAL FIJO ($)</label>
-        <input type="number" id="apo" oninput="actualizar()">
-        <label>TASA ANUAL (TNA %)</label>
-        <input type="number" id="tna" oninput="actualizar()">
-        <label>PLAZO PROYECTADO (AÑOS)</label>
-        <input type="number" id="yrs" oninput="actualizar()">
-
-        <div class="card-info">
-            <small style="color:var(--gold)">MI GANANCIA POR DÍA</small>
+        <div class="diario-card">
+            <small style="color:var(--gold)">GANANCIA POR DÍA</small>
             <div id="rentaDiaria">$ 0</div>
         </div>
 
-        <div class="printer-box">
-            <h3 style="color:var(--gold); font-size: 13px; margin:0 0 5px 0;">🖨️ GASTO IMPRESORA (105 kWh)</h3>
-            <label style="font-size: 9px;">PRECIO x kWh ($)</label>
-            <input type="number" id="precioKwh" oninput="actualizar()" style="margin-bottom:5px; padding:8px;">
-            <div id="gastoImpresora" style="color:#ffd700; font-weight:bold; font-size: 16px;">$ 0 / mes</div>
+        <h2>🏆 ESCALA DE METAS</h2>
+        <div class="metas-container">
+            <table><tbody id="tablaMetas"></tbody></table>
         </div>
     </div>
 
     <div class="panel">
         <h2>📈 PROYECCIÓN DE RIQUEZA</h2>
-        <div style="height: 400px;"><canvas id="miGrafico"></canvas></div>
+        <div style="height: 400px; background: rgba(0,0,0,0.5); border-radius: 15px; padding: 15px; border: 1px solid rgba(212, 175, 55, 0.2);">
+            <canvas id="miGrafico"></canvas>
+        </div>
+        
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 25px; text-align: center;">
-            <div class="card-info"><small>TOTAL FINAL</small><div id="resTotal" style="font-size:22px;"></div></div>
-            <div class="card-info"><small>GANANCIA NETA</small><div id="resInt" style="font-size:22px;"></div></div>
+            <div class="diario-card">
+                <small style="color:var(--gold)">RESULTADO FINAL</small>
+                <div id="resTotal" style="font-size: 24px;"></div>
+            </div>
+            <div class="diario-card">
+                <small style="color:var(--gold)">INTERESES NETOS</small>
+                <div id="resInt" style="font-size: 24px;"></div>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
     let grafico;
-    const KWH_MES = 105;
 
-    window.onload = () => {
+    window.onload = function() {
         document.getElementById('cap').value = localStorage.getItem('cap') || 100000;
         document.getElementById('apo').value = localStorage.getItem('apo') || 10000;
-        document.getElementById('tna').value = localStorage.getItem('tna') || 45;
+        document.getElementById('tna').value = localStorage.getItem('tna') || 40;
         document.getElementById('yrs').value = localStorage.getItem('yrs') || 5;
-        document.getElementById('precioKwh').value = localStorage.getItem('precioKwh') || 60;
         actualizar();
     };
 
-    function inyectarManual() {
-        let monto = parseFloat(document.getElementById('montoManual').value) || 0;
-        if(monto > 0) {
-            let actual = parseFloat(document.getElementById('cap').value) || 0;
-            document.getElementById('cap').value = actual + monto;
-            document.getElementById('montoManual').value = ""; 
+    function inyectar() {
+        const extra = parseFloat(document.getElementById('montoInyectar').value) || 0;
+        const actual = parseFloat(document.getElementById('cap').value) || 0;
+        if(extra > 0) {
+            document.getElementById('cap').value = actual + extra;
+            document.getElementById('montoInyectar').value = ""; // Limpia el cuadro tras inyectar
             actualizar();
         }
     }
@@ -104,16 +193,11 @@
         const apo = parseFloat(document.getElementById('apo').value) || 0;
         const tna = parseFloat(document.getElementById('tna').value) || 0;
         const yrs = parseFloat(document.getElementById('yrs').value) || 0;
-        const pKwh = parseFloat(document.getElementById('precioKwh').value) || 0;
 
         localStorage.setItem('cap', cap);
         localStorage.setItem('apo', apo);
         localStorage.setItem('tna', tna);
         localStorage.setItem('yrs', yrs);
-        localStorage.setItem('precioKwh', pKwh);
-
-        const costoImpresora = KWH_MES * pKwh;
-        document.getElementById('gastoImpresora').innerText = costoImpresora.toLocaleString('es-AR', {style:'currency', currency:'ARS'}) + " / mes";
 
         const tMensual = (tna / 100) / 12;
         const tDiaria = (tna / 100) / 365;
@@ -121,20 +205,38 @@
 
         document.getElementById('rentaDiaria').innerText = (cap * tDiaria).toLocaleString('es-AR', {style:'currency', currency:'ARS'});
 
-        let labels = [], dataTotal = [], saldo = cap, invertido = cap;
+        let metas = [1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000];
+        for(let m = 3000; m <= 10000; m += 1000) { metas.push(m); }
+        
+        let metasEnc = {};
+        let labels = [], dataTotal = [];
+        let saldo = cap, invertido = cap;
+
         for (let i = 0; i <= meses; i++) {
-            if (i > 0) { 
-                saldo += apo; 
-                invertido += apo; 
-                saldo += (saldo * tMensual);
+            if (i > 0) {
+                saldo += apo;
+                invertido += apo;
+                saldo += (saldo * tMensual); // Interés Compuesto
             }
+            let rD = saldo * tDiaria;
+            metas.forEach(m => {
+                if (!metasEnc[m] && rD >= m) metasEnc[m] = (i === 0) ? "Logrado" : `Mes ${i}`;
+            });
             labels.push("M" + i);
             dataTotal.push(saldo);
         }
 
-        const fmt = (n) => n.toLocaleString('es-AR', {style:'currency', currency:'ARS'});
-        document.getElementById('resTotal').innerText = fmt(saldo);
-        document.getElementById('resInt').innerText = fmt(saldo - invertido);
+        let html = "";
+        metas.forEach(m => {
+            let log = metasEnc[m];
+            html += `<tr class="${log==='Logrado'?'meta-ok':''}"><td>$${m.toLocaleString()} / día</td><td>${log||'--'}</td></tr>`;
+        });
+        document.getElementById('tablaMetas').innerHTML = html;
+
+        const f = (v) => v.toLocaleString('es-AR', {style:'currency', currency:'ARS'});
+        document.getElementById('resTotal').innerText = f(saldo);
+        document.getElementById('resInt').innerText = f(saldo - invertido);
+
         render(labels, dataTotal);
     }
 
@@ -145,15 +247,20 @@
             type: 'line',
             data: {
                 labels: labels,
-                datasets: [{ label: 'Capital', data: data, borderColor: '#d4af37', backgroundColor: 'rgba(212, 175, 55, 0.1)', fill: true, tension: 0.3 }]
+                datasets: [{ 
+                    label: 'Balance Total', data: data, 
+                    borderColor: '#d4af37', 
+                    backgroundColor: 'rgba(212, 175, 55, 0.15)', 
+                    fill: true, tension: 0.3, pointRadius: 1
+                }]
             },
             options: { 
-                responsive: true, maintainAspectRatio: false, 
-                plugins: { legend: { display: false } }, 
-                scales: { 
-                    x: { ticks: { color: '#d4af37' } }, 
-                    y: { ticks: { color: '#d4af37', callback: v => '$' + v.toLocaleString() } } 
-                } 
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { labels: { color: '#d4af37' } } },
+                scales: {
+                    x: { ticks: { color: '#d4af37' }, grid: { color: 'rgba(212,175,55,0.1)' } },
+                    y: { ticks: { color: '#d4af37', callback: v => '$' + v.toLocaleString() }, grid: { color: 'rgba(212,175,55,0.1)' } }
+                }
             }
         });
     }
