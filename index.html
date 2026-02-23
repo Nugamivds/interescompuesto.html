@@ -3,77 +3,101 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inversión Gold - Metas y Proyecciones</title>
+    <title>Inversión Gold - Zen Mode</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { --p: #00ff88; --bg: #0b0f1a; --card: #161c2d; --accent: #38bdf8; --border: #2d3748; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; padding: 10px; display: flex; justify-content: center; }
-        .container { background: var(--card); padding: 20px; border-radius: 20px; width: 100%; max-width: 1000px; border: 1px solid var(--border); display: flex; flex-direction: column; gap: 15px; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; padding: 10px; overflow-x: hidden; }
         
-        .main-content { display: grid; grid-template-columns: 1fr; gap: 20px; }
-        @media (min-width: 850px) { .main-content { grid-template-columns: 350px 1fr; } }
+        /* Contenedor Principal */
+        .container { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 15px; }
+        
+        /* Navbar con Tuerca */
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 10px 5px; }
+        .settings-btn { font-size: 24px; cursor: pointer; color: var(--accent); transition: transform 0.3s; }
+        .settings-btn:hover { transform: rotate(90deg); }
+
+        /* Sidebar / Menú Oculto */
+        .sidebar { position: fixed; top: 0; right: -300px; width: 280px; height: 100%; background: #1a2236; box-shadow: -5px 0 15px rgba(0,0,0,0.5); z-index: 1000; transition: 0.4s; padding: 25px; box-sizing: border-box; border-left: 1px solid var(--border); }
+        .sidebar.open { right: 0; }
+        .sidebar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; color: var(--p); font-weight: bold; }
+        .close-btn { cursor: pointer; font-size: 20px; color: #ff5555; }
 
         /* Monitor */
-        .live-display { background: #000; padding: 20px; border-radius: 15px; text-align: center; border: 2px solid var(--p); box-shadow: 0 0 20px rgba(0,255,136,0.1); }
-        .live-amount { font-family: 'Courier New', monospace; font-size: 28px; font-weight: bold; color: var(--p); }
-        
-        .daily-earn-badge { background: #1e293b; padding: 10px; border-radius: 10px; margin-top: 10px; border-left: 4px solid var(--accent); }
+        .live-display { background: #000; padding: 20px; border-radius: 20px; text-align: center; border: 2px solid var(--p); box-shadow: 0 0 20px rgba(0,255,136,0.1); }
+        .live-amount { font-family: 'Courier New', monospace; font-size: clamp(24px, 6vw, 32px); font-weight: bold; color: var(--p); }
+        .daily-badge { background: #1e293b; padding: 8px; border-radius: 10px; margin-top: 10px; display: inline-block; border-left: 3px solid var(--accent); }
+
+        /* Inyección */
+        .injection-box { background: var(--card); padding: 20px; border-radius: 15px; border: 1px solid var(--border); text-align: center; }
+        .btn-inject { width: 100%; background: var(--p); color: #0b0f1a; border: none; border-radius: 10px; padding: 15px; font-weight: bold; cursor: pointer; margin-top: 10px; text-transform: uppercase; }
 
         /* Metas */
-        .goals-container { background: #0f172a; padding: 20px; border-radius: 15px; border: 1px solid var(--border); margin-top: 10px; }
-        .goals-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; margin-top: 15px; }
-        .goal-item { background: #161c2d; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 13px; display: flex; flex-direction: column; }
-        .goal-item.reached { border-color: var(--p); opacity: 0.8; background: rgba(0,255,136,0.05); }
-        .goal-item.pending { border-color: #334155; }
-        .check { color: var(--p); font-weight: bold; margin-bottom: 4px; }
-        .time-est { font-size: 11px; color: var(--accent); margin-top: 4px; }
+        .goals-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-top: 5px; }
+        .goal-item { background: var(--card); padding: 12px; border-radius: 12px; border: 1px solid var(--border); text-align: center; }
+        .goal-item.reached { border-color: var(--p); background: rgba(0,255,136,0.05); }
 
-        /* Inputs y Botones */
-        .section-title { font-size: 11px; color: var(--accent); text-transform: uppercase; font-weight: bold; margin: 10px 0 5px; }
-        input { width: 100%; padding: 12px; background: #0b0f1a; border: 1px solid var(--border); color: white; border-radius: 10px; font-size: 16px; box-sizing: border-box; }
-        .btn-p { cursor: pointer; border: none; font-weight: bold; border-radius: 8px; padding: 12px; background: var(--p); color: #0b0f1a; width: 100%; }
+        /* Inputs Generales */
+        label { display: block; font-size: 11px; color: var(--accent); margin-top: 15px; text-transform: uppercase; }
+        input { width: 100%; padding: 12px; background: #0b0f1a; border: 1px solid var(--border); color: white; border-radius: 8px; font-size: 16px; margin-top: 5px; box-sizing: border-box; }
         
-        .chart-container { background: #0f172a; padding: 15px; border-radius: 15px; border: 1px solid var(--border); min-height: 300px; }
+        .chart-container { height: 250px; background: var(--card); border-radius: 15px; padding: 10px; border: 1px solid var(--border); }
+        .overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); display:none; z-index:999; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2 style="text-align:center; color:var(--p); margin:0;">Inversión Gold - Roadmap</h2>
+<div id="overlay" class="overlay" onclick="toggleMenu()"></div>
+
+<div id="sidebar" class="sidebar">
+    <div class="sidebar-header">
+        <span>CONFIGURACIÓN</span>
+        <span class="close-btn" onclick="toggleMenu()">✖</span>
+    </div>
     
-    <div class="main-content">
-        <div class="controls-side">
-            <div class="live-display">
-                <div id="live-money" class="live-amount">$ 0,00</div>
-                <div id="acc-today" style="font-size: 14px; color: var(--p); margin-top: 5px;">...</div>
-                
-                <div class="daily-earn-badge">
-                    <span style="font-size: 10px; color: #888;">RENDIMIENTO DIARIO ACTUAL</span><br>
-                    <span id="daily-value" style="font-size: 18px; font-weight: bold; color: var(--accent);">$ 0,00</span>
-                </div>
-            </div>
+    <label>Capital Base ($)</label>
+    <input type="number" id="cap" onchange="saveData()">
+    
+    <label>Aporte Mensual ($)</label>
+    <input type="number" id="apo_mensual" onchange="saveData()">
+    
+    <label>TNA %</label>
+    <input type="number" id="tna" onchange="saveData()">
+    
+    <label>Años Proyección</label>
+    <input type="number" id="yrs" onchange="saveData()">
+    
+    <div style="margin-top: 30px; font-size: 10px; color: #64748b; text-align: center;">
+        Los cambios se guardan automáticamente en la nube.
+    </div>
+</div>
 
-            <div class="section-title">Configuración Cloud</div>
-            <label style="font-size: 10px;">Capital Actual ($)</label>
-            <input type="number" id="cap" onchange="saveData()">
-            
-            <label style="font-size: 10px;">Aporte Mensual ($)</label>
-            <input type="number" id="apo_mensual" onchange="saveData()">
+<div class="container">
+    <div class="header">
+        <h2 style="margin:0; color:var(--p); font-size: 18px;">GOLD MONITOR</h2>
+        <div class="settings-btn" onclick="toggleMenu()">⚙️</div>
+    </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <div><label style="font-size: 10px;">TNA %</label><input type="number" id="tna" onchange="saveData()"></div>
-                <div><label style="font-size: 10px;">Años Visibles</label><input type="number" id="yrs" onchange="saveData()"></div>
-            </div>
+    <div class="live-display">
+        <div id="live-money" class="live-amount">$ 0,00</div>
+        <div id="acc-today" style="font-size: 14px; color: var(--p); margin-top: 5px;">...</div>
+        <div class="daily-badge">
+            <span style="font-size: 10px; color: #888;">RENDIMIENTO DIARIO:</span>
+            <span id="daily-value" style="font-weight: bold; color: var(--accent);">$ 0,00</span>
         </div>
-
-        <div class="chart-container"><canvas id="myChart"></canvas></div>
     </div>
 
-    <div class="goals-container">
-        <div class="section-title" style="margin:0;">Camino a los $10.000 diarios</div>
-        <div id="goals-list" class="goals-grid">
-            </div>
+    <div class="injection-box">
+        <input type="number" id="manual_amount" placeholder="Monto a inyectar..." step="any">
+        <button class="btn-inject" onclick="injectCapital()">Inyectar Capital</button>
     </div>
+
+    <div class="chart-container">
+        <canvas id="myChart"></canvas>
+    </div>
+
+    <div class="section-title" style="font-size: 11px; color: var(--accent); font-weight: bold;">METAS DIARIAS</div>
+    <div id="goals-list" class="goals-grid"></div>
 </div>
 
 <script type="module">
@@ -97,11 +121,11 @@
     onValue(dataRef, (snapshot) => {
         const data = snapshot.val();
         if (data) {
-            document.getElementById('cap').value = data.cap;
-            document.getElementById('apo_mensual').value = data.apo;
-            document.getElementById('tna').value = data.tna;
+            document.getElementById('cap').value = data.cap || 0;
+            document.getElementById('apo_mensual').value = data.apo || 0;
+            document.getElementById('tna').value = data.tna || 32;
             document.getElementById('yrs').value = data.yrs || 1;
-            updateEverything();
+            updateUI();
         }
     });
 
@@ -113,101 +137,82 @@
             yrs: parseFloat(document.getElementById('yrs').value) || 1
         });
     };
+
+    window.injectCapital = function() {
+        const input = document.getElementById('manual_amount');
+        const monto = parseFloat(input.value) || 0;
+        if (monto > 0) {
+            const capActual = parseFloat(document.getElementById('cap').value) || 0;
+            document.getElementById('cap').value = capActual + monto;
+            input.value = '';
+            saveData();
+        }
+    };
 </script>
 
 <script>
     let myChart;
 
-    function updateEverything() {
+    function toggleMenu() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('overlay');
+        sidebar.classList.toggle('open');
+        overlay.style.display = sidebar.classList.contains('open') ? 'block' : 'none';
+    }
+
+    function updateUI() {
         const cap = parseFloat(document.getElementById('cap').value) || 0;
         const apo = parseFloat(document.getElementById('apo_mensual').value) || 0;
         const tna = (parseFloat(document.getElementById('tna').value) || 0) / 100;
         
-        // 1. Ganancia diaria actual
-        const gananciaDiaria = (cap * tna) / 365;
-        document.getElementById('daily-value').innerText = gananciaDiaria.toLocaleString('es-AR', {style:'currency', currency:'ARS'});
+        const gDiaria = (cap * tna) / 365;
+        document.getElementById('daily-value').innerText = gDiaria.toLocaleString('es-AR', {style:'currency', currency:'ARS'});
 
-        // 2. Gráfico y Metas
-        calculateGoals(cap, apo, tna);
-        updateChart(cap, apo, tna);
-    }
-
-    function calculateGoals(cap, apo, tna) {
+        // Metas
         const list = document.getElementById('goals-list');
         list.innerHTML = '';
-        const tasaDiaria = tna / 365;
-        const tasaMensual = tna / 12;
-
-        // Generar metas de 100 en 100 hasta 10.000
         for (let meta = 100; meta <= 10000; meta += 100) {
-            // Solo mostrar algunas para no saturar si es muy largo, o todas las cercanas
-            const gananciaDiariaActual = (cap * tna) / 365;
-            
-            if (meta % 500 !== 0 && (meta < gananciaDiariaActual - 200 || meta > gananciaDiariaActual + 1500)) continue;
-
+            if (meta % 500 !== 0 && (meta < gDiaria - 200 || meta > gDiaria + 1200)) continue;
             let div = document.createElement('div');
-            let mesesFaltantes = 0;
-            let saldoTemp = cap;
-            let alcanzada = false;
-
-            if (gananciaDiariaActual >= meta) {
-                alcanzada = true;
-                div.className = 'goal-item reached';
-            } else {
-                div.className = 'goal-item pending';
-                // Simulación de proyección para llegar a la meta
-                while ((saldoTemp * tna / 365) < meta && mesesFaltantes < 240) { // Max 20 años
-                    saldoTemp = (saldoTemp + apo) * (1 + tasaMensual);
-                    mesesFaltantes++;
+            let meses = 0, saldoTemp = cap;
+            let lograda = gDiaria >= meta;
+            if (!lograda) {
+                while ((saldoTemp * tna / 365) < meta && meses < 240) {
+                    saldoTemp = (saldoTemp + apo) * (1 + (tna/12)); meses++;
                 }
             }
-
-            div.innerHTML = `
-                <span class="check">${alcanzada ? '✅ SUPERADA' : '🚀 META'}</span>
-                <span style="font-weight:bold">$${meta}/día</span>
-                <span class="time-est">${alcanzada ? '¡Logrado!' : 'En ' + mesesFaltantes + ' meses'}</span>
-            `;
+            div.className = 'goal-item ' + (lograda ? 'reached' : '');
+            div.innerHTML = `<div style="font-size:10px;color:${lograda?'var(--p)':'var(--accent)'}">${lograda?'✅':'🚀'} $${meta}</div>
+                             <div style="font-size:11px;opacity:0.6">${lograda?'Logrado':'En '+meses+' m'}</div>`;
             list.appendChild(div);
         }
-    }
 
-    function updateChart(cap, apo, tna) {
+        // Gráfico
         const yrs = parseFloat(document.getElementById('yrs').value) || 1;
-        let meses = Math.floor(yrs * 12);
-        let labels = ["Inicio"], dataT = [cap], saldo = cap;
-        for (let i = 1; i <= meses; i++) {
+        let mesesP = Math.floor(yrs * 12), labels = [], dataT = [], saldo = cap;
+        for (let i = 0; i <= mesesP; i++) {
+            dataT.push(saldo); labels.push("M"+i);
             saldo = (saldo + apo) * (1 + (tna/12));
-            dataT.push(saldo);
-            labels.push("M" + i);
         }
         const ctx = document.getElementById('myChart').getContext('2d');
         if (myChart) myChart.destroy();
         myChart = new Chart(ctx, {
             type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{ label: 'Proyección Capital', data: dataT, borderColor: '#00ff88', fill: true, backgroundColor: 'rgba(0,255,136,0.1)', tension: 0.3 }]
-            },
+            data: { labels, datasets: [{ data: dataT, borderColor: '#00ff88', tension: 0.3, fill: true, backgroundColor: 'rgba(0,255,136,0.1)' }] },
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
-                       scales: { y: { ticks: { color: '#64748b' } }, x: { ticks: { color: '#64748b' } } } }
+                       scales: { y: { ticks: { color: '#64748b' }, grid: { color: '#2d3748' } }, x: { ticks: { color: '#64748b' }, grid: { display: false } } } }
         });
     }
 
     setInterval(() => {
         const cap = parseFloat(document.getElementById('cap').value) || 0;
         const tna = (parseFloat(document.getElementById('tna').value) || 0) / 100;
-        const argNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }));
-        
-        let inicioCiclo = new Date(argNow);
-        inicioCiclo.setHours(5, 0, 0, 0);
-        if (argNow < inicioCiclo) inicioCiclo.setDate(inicioCiclo.getDate() - 1);
-
-        let diff = (argNow - inicioCiclo) / 1000;
-        let ganDiaria = (cap * tna / 365);
-        let acc = diff * (ganDiaria / 86400);
-
+        const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }));
+        let inicio = new Date(now); inicio.setHours(5, 0, 0, 0);
+        if (now < inicio) inicio.setDate(inicio.getDate() - 1);
+        let acc = ((now - inicio) / 1000) * ((cap * tna / 365) / 86400);
         document.getElementById('live-money').innerText = (cap + acc).toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 3 });
-        document.getElementById('acc-today').innerText = "Acumulado Hoy: $" + acc.toLocaleString('es-AR', {minimumFractionDigits: 2});
+        document.getElementById('acc-today').innerText = "Acumulado: $" + acc.toLocaleString('es-AR', {minimumFractionDigits: 2});
     }, 1000);
 </script>
 </body>
