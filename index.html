@@ -3,310 +3,184 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitor de Inversión Pro</title>
+    <title>Inversión Gold - Cloud Sync</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { --p: #00ff88; --bg: #0b0f1a; --card: #161c2d; --accent: #38bdf8; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; padding: 10px; display: flex; justify-content: center; }
+        .container { background: var(--card); padding: 20px; border-radius: 20px; width: 100%; max-width: 1000px; border: 1px solid #2d3748; display: flex; flex-direction: column; gap: 15px; }
+        h2 { text-align: center; color: var(--p); text-transform: uppercase; font-size: 18px; margin: 0; padding-bottom: 10px; border-bottom: 1px solid #2d3748; }
         
-        body { 
-            font-family: 'Segoe UI', system-ui, sans-serif; 
-            background: var(--bg); 
-            color: white; 
-            margin: 0; 
-            padding: 10px;
-            display: flex;
-            justify-content: center;
-        }
+        .main-content { display: grid; grid-template-columns: 1fr; gap: 20px; }
+        @media (min-width: 850px) { .main-content { grid-template-columns: 350px 1fr; } }
 
-        .container { 
-            background: var(--card); 
-            padding: 20px; 
-            border-radius: 20px; 
-            width: 100%; 
-            max-width: 1000px; 
-            border: 1px solid #2d3748; 
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
+        .live-display { background: #000; padding: 20px; border-radius: 15px; text-align: center; border: 2px solid var(--p); position: relative; }
+        .status-dot { position: absolute; top: 10px; right: 10px; width: 8px; height: 8px; border-radius: 50%; background: #555; }
+        .live-amount { font-family: 'Courier New', monospace; font-size: clamp(22px, 5vw, 28px); font-weight: bold; color: var(--p); }
+        
+        .section-title { font-size: 11px; color: var(--accent); text-transform: uppercase; font-weight: bold; margin: 10px 0 5px; }
+        input { width: 100%; padding: 12px; background: #0b0f1a; border: 1px solid #2d3748; color: white; border-radius: 10px; font-size: 16px; box-sizing: border-box; transition: 0.3s; }
+        input:focus { border-color: var(--p); outline: none; }
 
-        /* Título adaptable */
-        h2 { 
-            text-align: center; 
-            color: var(--p); 
-            text-transform: uppercase; 
-            letter-spacing: 1px; 
-            font-size: clamp(14px, 5vw, 18px); 
-            margin: 0;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #2d3748;
-        }
+        .btn-p { cursor: pointer; border: none; font-weight: bold; border-radius: 8px; padding: 10px; background: var(--p); color: #0b0f1a; width: 100%; }
 
-        /* Layout en dos columnas para PC, una para móvil */
-        .main-content {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 20px;
-        }
-
-        @media (min-width: 850px) {
-            .main-content { grid-template-columns: 350px 1fr; }
-        }
-
-        /* Lado de Controles */
-        .controls-side { display: flex; flex-direction: column; gap: 15px; }
-
-        /* Monitor en vivo optimizado */
-        .live-display { 
-            background: #000; 
-            padding: 20px; 
-            border-radius: 15px; 
-            text-align: center; 
-            border: 2px solid var(--p);
-            box-shadow: 0 0 15px rgba(0, 255, 136, 0.1);
-        }
-        .live-amount { 
-            font-family: 'Courier New', monospace; 
-            font-size: clamp(24px, 6vw, 28px); 
-            font-weight: bold; 
-            color: var(--p); 
-        }
-
-        .section-title { 
-            font-size: 11px; 
-            color: var(--accent); 
-            text-transform: uppercase; 
-            letter-spacing: 1px; 
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        /* Inputs más grandes para móviles */
-        .input-group { display: flex; flex-direction: column; gap: 5px; }
-        label { font-size: 12px; color: #94a3b8; }
-        input { 
-            width: 100%; 
-            padding: 14px; 
-            background: #0b0f1a; 
-            border: 1px solid #2d3748; 
-            color: white; 
-            border-radius: 10px; 
-            font-size: 16px; 
-            outline: none; 
-            box-sizing: border-box; 
-        }
-        input:focus { border-color: var(--p); background: #1a2233; }
-
-        /* Panel de Inyección */
-        .injection-panel { 
-            background: #1e293b; 
-            padding: 12px; 
-            border-radius: 12px; 
-            display: flex; 
-            gap: 10px; 
-        }
-        .btn-add { 
-            background: var(--p); 
-            color: #0b0f1a; 
-            border: none; 
-            border-radius: 8px; 
-            cursor: pointer; 
-            font-weight: bold; 
-            padding: 0 20px;
-            font-size: 16px;
-        }
-
-        /* Resultados */
-        .res-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .res-box { 
-            background: #0b0f1a; 
-            padding: 12px; 
-            border-radius: 10px; 
-            text-align: center; 
-            border: 1px solid #2d3748; 
-        }
-        .res-val { display: block; font-size: 14px; font-weight: bold; color: var(--accent); margin-top: 5px; }
-
-        /* Lado del Gráfico */
-        .chart-container {
-            background: #0f172a;
-            padding: 15px;
-            border-radius: 15px;
-            border: 1px solid #2d3748;
-            min-height: 300px;
-            position: relative;
-        }
-
-        .footer { 
-            text-align: center; 
-            font-size: 11px; 
-            color: #64748b; 
-            border-top: 1px solid #2d3748; 
-            padding-top: 15px;
-        }
+        .chart-container { background: #0f172a; padding: 15px; border-radius: 15px; border: 1px solid #2d3748; min-height: 300px; }
+        .res-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        .res-box { background: #0b0f1a; padding: 10px; border-radius: 10px; text-align: center; border: 1px solid #2d3748; }
+        .footer { text-align: center; font-size: 11px; color: #64748b; border-top: 1px solid #2d3748; padding-top: 10px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Estrategia de Inversión</h2>
+    <h2>Inversión Gold <span style="font-size: 10px; vertical-align: middle; opacity: 0.5;">v2.0 Cloud</span></h2>
     
     <div class="main-content">
         <div class="controls-side">
             <div class="live-display">
-                <div style="font-size: 10px; color: #888; margin-bottom: 5px;">SALDO ACTUAL (ARG)</div>
+                <div id="sync-indicator" class="status-dot" title="Sincronizado"></div>
                 <div id="live-money" class="live-amount">$ 0,00</div>
-                <div id="acc-today" style="font-size: 14px; color: var(--p); margin-top: 5px; font-weight: bold;">+ $0,00 hoy</div>
+                <div id="acc-today" style="font-size: 14px; color: var(--p); margin-top: 5px;">+ $0,00 hoy</div>
             </div>
 
-            <div class="section-title">Inyección Manual</div>
-            <div class="injection-panel">
-                <input type="number" id="manual_amount" placeholder="Monto...">
-                <button class="btn-add" onclick="injectManual()">Sumar</button>
+            <div class="section-title">Aporte Único</div>
+            <div style="display: flex; gap: 5px;">
+                <input type="number" id="manual_amount" placeholder="Monto a sumar...">
+                <button class="btn-p" onclick="injectManual()" style="width: 80px;">Ok</button>
             </div>
 
-            <div class="section-title">Configuración</div>
-            <div class="input-group">
-                <label>Capital Base ($)</label>
-                <input type="number" id="cap" value="1272750" oninput="updateAll()">
-            </div>
+            <div class="section-title">Estrategia (Auto-Sync)</div>
+            <label style="font-size: 10px;">Capital Base ($)</label>
+            <input type="number" id="cap" onchange="saveData()">
             
-            <div class="input-group">
-                <label>Aporte Mensual Fijo ($)</label>
-                <input type="number" id="apo_mensual" value="0" oninput="updateAll()">
-            </div>
+            <label style="font-size: 10px;">Aporte Mensual ($)</label>
+            <input type="number" id="apo_mensual" onchange="saveData()">
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <div class="input-group">
-                    <label>TNA %</label>
-                    <input type="number" id="tna" value="32" oninput="updateAll()">
-                </div>
-                <div class="input-group">
-                    <label>Plazo (Años)</label>
-                    <input type="number" id="yrs" value="1" oninput="updateAll()">
-                </div>
+                <div><label style="font-size: 10px;">TNA %</label><input type="number" id="tna" onchange="saveData()"></div>
+                <div><label style="font-size: 10px;">Años</label><input type="number" id="yrs" onchange="saveData()"></div>
             </div>
 
             <div class="res-grid">
-                <div class="res-box">
-                    <span style="font-size: 10px; color: #94a3b8;">FINAL</span>
-                    <span id="v_total" class="res-val">$ 0</span>
-                </div>
-                <div class="res-box">
-                    <span style="font-size: 10px; color: #94a3b8;">GANANCIA</span>
-                    <span id="v_int" class="res-val">$ 0</span>
-                </div>
+                <div class="res-box"><span style="font-size: 9px; color: #888;">FINAL</span><span id="v_total" style="color:var(--accent); font-weight:bold;">$ 0</span></div>
+                <div class="res-box"><span style="font-size: 9px; color: #888;">GANANCIA</span><span id="v_int" style="color:var(--accent); font-weight:bold;">$ 0</span></div>
             </div>
         </div>
 
-        <div class="chart-container">
-            <canvas id="myChart"></canvas>
-        </div>
+        <div class="chart-container"><canvas id="myChart"></canvas></div>
     </div>
 
-    <div class="footer">
-        📅 <span id="fecha-ar"></span> | <span id="hora-ar"></span>
-    </div>
+    <div class="footer">📅 <span id="fecha-ar"></span> | <span id="hora-ar"></span></div>
 </div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyBUKbTIfmFklM_Y059j-kKD8Q-L6o2lYs8",
+        authDomain: "inversiongold-2c5c7.firebaseapp.com",
+        databaseURL: "https://inversiongold-2c5c7-default-rtdb.firebaseio.com",
+        projectId: "inversiongold-2c5c7",
+        storageBucket: "inversiongold-2c5c7.firebasestorage.app",
+        messagingSenderId: "826689789700",
+        appId: "1:826689789700:web:36c95e7f9b9e57d8b13a51"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const dataRef = ref(db, 'user_data');
+
+    // Escuchar cambios en la nube
+    onValue(dataRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            document.getElementById('cap').value = data.cap;
+            document.getElementById('apo_mensual').value = data.apo;
+            document.getElementById('tna').value = data.tna;
+            document.getElementById('yrs').value = data.yrs;
+            document.getElementById('sync-indicator').style.background = '#00ff88';
+            updateCalculations();
+        }
+    });
+
+    // Guardar cambios en la nube
+    window.saveData = function() {
+        set(dataRef, {
+            cap: parseFloat(document.getElementById('cap').value) || 0,
+            apo: parseFloat(document.getElementById('apo_mensual').value) || 0,
+            tna: parseFloat(document.getElementById('tna').value) || 0,
+            yrs: parseFloat(document.getElementById('yrs').value) || 0
+        });
+    };
+
+    window.injectManual = function() {
+        let val = parseFloat(document.getElementById('manual_amount').value) || 0;
+        if (val > 0) {
+            let currentCap = parseFloat(document.getElementById('cap').value) || 0;
+            document.getElementById('cap').value = currentCap + val;
+            document.getElementById('manual_amount').value = '';
+            saveData();
+        }
+    };
+</script>
 
 <script>
     let myChart;
 
-    function injectManual() {
-        let val = parseFloat(document.getElementById('manual_amount').value) || 0;
-        let capInput = document.getElementById('cap');
-        if (val > 0) {
-            capInput.value = (parseFloat(capInput.value) || 0) + val;
-            document.getElementById('manual_amount').value = '';
-            updateAll();
-        }
-    }
-
-    function updateAll() {
-        const capInicial = parseFloat(document.getElementById('cap').value) || 0;
-        const apoMensual = parseFloat(document.getElementById('apo_mensual').value) || 0;
+    function updateCalculations() {
+        const cap = parseFloat(document.getElementById('cap').value) || 0;
+        const apo = parseFloat(document.getElementById('apo_mensual').value) || 0;
         const tna = (parseFloat(document.getElementById('tna').value) || 0) / 100;
         const yrs = parseFloat(document.getElementById('yrs').value) || 0;
 
         let meses = Math.floor(yrs * 12) || 1;
-        let saldoProy = capInicial;
-        let tasaMensual = tna / 12;
-
-        let dataTotal = [capInicial];
+        let saldo = cap;
+        let tasaM = tna / 12;
         let labels = ["Inicio"];
-        let dataAportes = [capInicial];
+        let dataTotal = [cap];
+        let dataPuro = [cap];
 
         for (let i = 1; i <= meses; i++) {
-            saldoProy += apoMensual;
-            saldoProy += (saldoProy * tasaMensual);
-            dataTotal.push(saldoProy);
-            dataAportes.push(capInicial + (apoMensual * i));
-            labels.push("Mes " + i);
+            saldo = (saldo + apo) * (1 + tasaM);
+            dataTotal.push(saldo);
+            dataPuro.push(cap + (apo * i));
+            labels.push("M" + i);
         }
 
-        document.getElementById('v_total').innerText = saldoProy.toLocaleString('es-AR', {style:'currency', currency:'ARS'});
-        let totalPuesto = capInicial + (apoMensual * meses);
-        document.getElementById('v_int').innerText = (saldoProy - totalPuesto).toLocaleString('es-AR', {style:'currency', currency:'ARS'});
-
-        drawChart(labels, dataTotal, dataAportes);
+        document.getElementById('v_total').innerText = saldo.toLocaleString('es-AR', {style:'currency', currency:'ARS'});
+        document.getElementById('v_int').innerText = (saldo - (cap + apo * meses)).toLocaleString('es-AR', {style:'currency', currency:'ARS'});
+        
+        drawChart(labels, dataTotal, dataPuro);
     }
 
-    function drawChart(labels, total, aportes) {
+    function drawChart(labels, total, puro) {
         const ctx = document.getElementById('myChart').getContext('2d');
         if (myChart) myChart.destroy();
         myChart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: labels,
-                datasets: [{
-                    label: 'Saldo con Interés',
-                    data: total,
-                    borderColor: '#00ff88',
-                    backgroundColor: 'rgba(0, 255, 136, 0.1)',
-                    fill: true,
-                    tension: 0.3
-                }, {
-                    label: 'Solo Aportes',
-                    data: aportes,
-                    borderColor: '#64748b',
-                    borderDash: [5, 5],
-                    fill: false
-                }]
+                datasets: [{ label: 'Con Interés', data: total, borderColor: '#00ff88', fill: true, backgroundColor: 'rgba(0,255,136,0.1)', tension: 0.3 },
+                           { label: 'Aportes', data: puro, borderColor: '#64748b', borderDash: [5,5] }]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { labels: { color: 'white', font: { size: 10 } } } },
-                scales: {
-                    y: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: '#1e293b' } },
-                    x: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { display: false } }
-                }
-            }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: 'white' } } },
+                       scales: { y: { ticks: { color: '#64748b' } }, x: { ticks: { color: '#64748b' } } } }
         });
     }
 
-    function tick() {
+    setInterval(() => {
         const cap = parseFloat(document.getElementById('cap').value) || 0;
         const tna = (parseFloat(document.getElementById('tna').value) || 0) / 100;
-        const options = { timeZone: 'America/Argentina/Buenos_Aires', hour12: false };
-        const argNow = new Date(new Date().toLocaleString('en-US', options));
-
+        const argNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }));
         document.getElementById('fecha-ar').innerText = argNow.toLocaleDateString('es-AR');
         document.getElementById('hora-ar').innerText = argNow.toLocaleTimeString('es-AR');
-
-        let diaria = (cap * tna) / 365;
-        let segundosHoy = (argNow.getHours() * 3600) + (argNow.getMinutes() * 60) + argNow.getSeconds();
-        let acumulado = segundosHoy * (diaria / 86400);
-        
-        document.getElementById('live-money').innerText = (cap + acumulado).toLocaleString('es-AR', {
-            style: 'currency', currency: 'ARS', minimumFractionDigits: 3
-        });
-        document.getElementById('acc-today').innerText = "+ $" + acumulado.toLocaleString('es-AR', {minimumFractionDigits: 2}) + " hoy";
-    }
-
-    setInterval(tick, 1000);
-    updateAll();
+        let diaria = (cap * tna / 365);
+        let segs = (argNow.getHours() * 3600) + (argNow.getMinutes() * 60) + argNow.getSeconds();
+        let acc = segs * (diaria / 86400);
+        document.getElementById('live-money').innerText = (cap + acc).toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 3 });
+        document.getElementById('acc-today').innerText = "+ $" + acc.toLocaleString('es-AR', {minimumFractionDigits: 2}) + " hoy";
+    }, 1000);
 </script>
-
 </body>
 </html>
