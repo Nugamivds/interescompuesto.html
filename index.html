@@ -3,68 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Inversión Gold - Mobile Ready</title>
+    <title>Inversión Gold - Nube Realtime</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        :root {
-            --gold: #d4af37;
-            --gold-light: #f7ef8a;
-            --dark-panel: rgba(15, 15, 15, 0.95);
-        }
 
+    <style>
+        :root { --gold: #d4af37; --gold-light: #f7ef8a; --dark-panel: rgba(10, 10, 10, 0.95); }
         body { 
             margin: 0; padding: 10px; font-family: 'Segoe UI', sans-serif; 
             background: url('https://c1.wallpaperflare.com/preview/489/364/872/dollars-money-us-dollars-cash.jpg') no-repeat center center fixed;
             background-size: cover; color: white; min-height: 100vh;
         }
-
-        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: -1; }
-
-        .container { 
-            max-width: 1200px; margin: auto; 
-            display: grid; 
-            grid-template-columns: 1fr; /* Una columna por defecto para móvil */
-            gap: 20px; 
-        }
-
-        /* En pantallas grandes (PC), volvemos a las dos columnas */
-        @media (min-width: 850px) {
-            .container { grid-template-columns: 380px 1fr; }
-        }
-
-        .panel { 
-            background: var(--dark-panel); padding: 20px; border-radius: 15px; border: 1px solid var(--gold);
-            box-shadow: 0 0 20px rgba(212, 175, 55, 0.2); backdrop-filter: blur(5px);
-        }
-
-        h2 { color: var(--gold); text-align: center; text-transform: uppercase; font-size: 16px; border-bottom: 1px solid var(--gold); padding-bottom: 8px; }
-
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: -1; }
+        .container { max-width: 1200px; margin: auto; display: grid; grid-template-columns: 1fr; gap: 20px; }
+        @media (min-width: 850px) { .container { grid-template-columns: 380px 1fr; } }
+        
+        .panel { background: var(--dark-panel); padding: 20px; border-radius: 15px; border: 1px solid var(--gold); box-shadow: 0 0 20px rgba(212, 175, 55, 0.2); }
+        h2 { color: var(--gold); text-align: center; font-size: 16px; border-bottom: 1px solid var(--gold); padding-bottom: 8px; margin-top: 0; }
         label { display: block; font-size: 10px; font-weight: bold; color: var(--gold); margin-bottom: 3px; }
-
-        input { 
-            width: 100%; padding: 10px; background: #000; border: 1px solid var(--gold); 
-            border-radius: 8px; color: #ffd700; font-size: 16px; box-sizing: border-box; margin-bottom: 10px;
-        }
-
+        input { width: 100%; padding: 10px; background: #000; border: 1px solid var(--gold); border-radius: 8px; color: #ffd700; font-size: 16px; box-sizing: border-box; margin-bottom: 10px; }
+        
         .btn-inject { 
-            width: 100%; background: linear-gradient(45deg, #b8860b, var(--gold-light), var(--gold));
-            color: #000; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer;
+            width: 100%; background: linear-gradient(45deg, #b8860b, var(--gold-light), var(--gold)); 
+            color: #000; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; text-transform: uppercase;
         }
 
+        .status-bar { font-size: 9px; text-align: center; color: #39ff14; margin-bottom: 10px; letter-spacing: 1px; }
         .diario-card { background: #000; border: 1px solid var(--gold); padding: 10px; border-radius: 10px; text-align: center; margin: 10px 0; }
-        .diario-card div { font-size: 24px; font-weight: bold; color: #ffd700; }
-
-        /* Contenedor del gráfico con altura fija para que no desaparezca en móvil */
-        .chart-container {
-            position: relative;
-            height: 300px;
-            width: 100%;
-            background: rgba(0,0,0,0.5);
-            border-radius: 10px;
-            padding: 10px;
-            box-sizing: border-box;
-        }
-
+        .diario-card div { font-size: 26px; font-weight: bold; color: #ffd700; }
+        
+        .chart-container { height: 300px; width: 100%; background: rgba(0,0,0,0.5); border-radius: 10px; padding: 10px; box-sizing: border-box; }
         .metas-container { max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.6); border-radius: 10px; font-size: 13px; }
         table { width: 100%; border-collapse: collapse; }
         td { padding: 10px; border-bottom: 1px solid rgba(212,175,55,0.1); }
@@ -72,61 +42,85 @@
     </style>
 </head>
 <body>
-
 <div class="overlay"></div>
-
 <div class="container">
     <div class="panel">
+        <div class="status-bar">● SINCRONIZACIÓN NUBE ACTIVA</div>
         <h2>💰 MOVIMIENTOS</h2>
+        
         <label>INYECTAR CAPITAL ($)</label>
-        <input type="number" id="montoInyectar" placeholder="Monto extra...">
-        <button class="btn-inject" onclick="inyectar()">SUMAR AL CAPITAL</button>
+        <input type="number" id="montoInyectar" placeholder="Ej: 5000">
+        <button class="btn-inject" onclick="inyectar()">Sumar al Capital</button>
         
         <div style="margin-top: 15px;">
             <label>CAPITAL ACTUAL ($)</label>
-            <input type="number" id="cap" oninput="actualizar()">
+            <input type="number" id="cap" oninput="subirANube()">
             <label>APORTE MENSUAL ($)</label>
-            <input type="number" id="apo" oninput="actualizar()">
+            <input type="number" id="apo" oninput="subirANube()">
             <label>TASA ANUAL (TNA %)</label>
-            <input type="number" id="tna" oninput="actualizar()">
+            <input type="number" id="tna" oninput="subirANube()">
             <label>PLAZO (AÑOS)</label>
-            <input type="number" id="yrs" oninput="actualizar()">
+            <input type="number" id="yrs" oninput="subirANube()">
         </div>
 
         <div class="diario-card">
-            <small style="color:var(--gold)">GANANCIA DIARIA</small>
+            <small style="color:var(--gold)">GANANCIA DIARIA ESTIMADA</small>
             <div id="rentaDiaria">$ 0</div>
         </div>
 
-        <h2>🏆 METAS</h2>
-        <div class="metas-container">
-            <table><tbody id="tablaMetas"></tbody></table>
-        </div>
+        <h2>🏆 ESCALA DE METAS</h2>
+        <div class="metas-container"><table><tbody id="tablaMetas"></tbody></table></div>
     </div>
 
     <div class="panel">
-        <h2>📈 PROYECCIÓN</h2>
-        <div class="chart-container">
-            <canvas id="miGrafico"></canvas>
-        </div>
-        
+        <h2>📈 PROYECCIÓN DE RIQUEZA</h2>
+        <div class="chart-container"><canvas id="miGrafico"></canvas></div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
-            <div class="diario-card"><small style="font-size:9px">TOTAL</small><div id="resTotal" style="font-size: 16px;"></div></div>
-            <div class="diario-card"><small style="font-size:9px">INTERÉS</small><div id="resInt" style="font-size: 16px;"></div></div>
+            <div class="diario-card"><small style="font-size:9px">TOTAL FINAL</small><div id="resTotal" style="font-size: 18px;"></div></div>
+            <div class="diario-card"><small style="font-size:9px">INTERESES NETOS</small><div id="resInt" style="font-size: 18px;"></div></div>
         </div>
     </div>
 </div>
 
 <script>
+    // Configuración con tus credenciales
+    const firebaseConfig = {
+        apiKey: "AIzaSyBUKbTIfmFklM_Y059j-kKD8Q-L6o2lYs8",
+        authDomain: "inversiongold-2c5c7.firebaseapp.com",
+        databaseURL: "https://inversiongold-2c5c7-default-rtdb.firebaseio.com",
+        projectId: "inversiongold-2c5c7",
+        storageBucket: "inversiongold-2c5c7.firebasestorage.app",
+        messagingSenderId: "826689789700",
+        appId: "1:826689789700:web:36c95e7f9b9e57d8b13a51"
+    };
+
+    // Inicializar Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
     let grafico;
 
-    window.onload = function() {
-        document.getElementById('cap').value = localStorage.getItem('cap') || 100000;
-        document.getElementById('apo').value = localStorage.getItem('apo') || 10000;
-        document.getElementById('tna').value = localStorage.getItem('tna') || 40;
-        document.getElementById('yrs').value = localStorage.getItem('yrs') || 5;
-        actualizar();
-    };
+    // LEER DE LA NUBE: Se activa solo cuando algo cambia en Firebase
+    db.ref('miInversion').on('value', (snapshot) => {
+        const val = snapshot.val();
+        if (val) {
+            document.getElementById('cap').value = val.cap;
+            document.getElementById('apo').value = val.apo;
+            document.getElementById('tna').value = val.tna;
+            document.getElementById('yrs').value = val.yrs;
+            actualizarCalculos(false); // Actualiza la pantalla sin volver a subir
+        }
+    });
+
+    // SUBIR A LA NUBE: Se activa cuando escribes algo
+    function subirANube() {
+        const datos = {
+            cap: parseFloat(document.getElementById('cap').value) || 0,
+            apo: parseFloat(document.getElementById('apo').value) || 0,
+            tna: parseFloat(document.getElementById('tna').value) || 0,
+            yrs: parseFloat(document.getElementById('yrs').value) || 0
+        };
+        db.ref('miInversion').set(datos);
+    }
 
     function inyectar() {
         const extra = parseFloat(document.getElementById('montoInyectar').value) || 0;
@@ -134,20 +128,17 @@
         if(extra > 0) {
             document.getElementById('cap').value = actual + extra;
             document.getElementById('montoInyectar').value = "";
-            actualizar();
+            subirANube();
         }
     }
 
-    function actualizar() {
+    function actualizarCalculos(debeSubir = true) {
         const cap = parseFloat(document.getElementById('cap').value) || 0;
         const apo = parseFloat(document.getElementById('apo').value) || 0;
         const tna = parseFloat(document.getElementById('tna').value) || 0;
         const yrs = parseFloat(document.getElementById('yrs').value) || 0;
 
-        localStorage.setItem('cap', cap);
-        localStorage.setItem('apo', apo);
-        localStorage.setItem('tna', tna);
-        localStorage.setItem('yrs', yrs);
+        if(debeSubir) subirANube();
 
         const tMensual = (tna / 100) / 12;
         const tDiaria = (tna / 100) / 365;
@@ -157,24 +148,16 @@
 
         let metas = [1200, 1500, 2000, 3000, 5000, 10000];
         let metasEnc = {};
-        let labels = [], dataTotal = [], dataInvertido = [], dataSoloInteres = [];
-        let saldoAc = cap, invAc = cap;
+        let labels = [], dataTotal = [], dataInv = [], dataInt = [];
+        let saldo = cap, inv = cap;
 
         for (let i = 0; i <= meses; i++) {
-            if (i > 0) {
-                invAc += apo;
-                saldoAc += apo;
-                saldoAc += (saldoAc * tMensual);
-            }
+            if (i > 0) { inv += apo; saldo += apo; saldo += (saldo * tMensual); }
             labels.push("M" + i);
-            dataTotal.push(saldoAc);
-            dataInvertido.push(invAc);
-            dataSoloInteres.push(saldoAc - invAc);
-
-            let rD = saldoAc * tDiaria;
-            metas.forEach(m => {
-                if (!metasEnc[m] && rD >= m) metasEnc[m] = (i === 0) ? "Ok" : "M" + i;
-            });
+            dataTotal.push(saldo);
+            dataInv.push(inv);
+            dataInt.push(saldo - inv);
+            metas.forEach(m => { if (!metasEnc[m] && (saldo * tDiaria) >= m) metasEnc[m] = (i === 0) ? "Ok" : "M" + i; });
         }
 
         let html = "";
@@ -183,15 +166,13 @@
             html += `<tr class="${log==='Ok'?'meta-ok':''}"><td>$${m.toLocaleString()}</td><td align="right">${log||'--'}</td></tr>`;
         });
         document.getElementById('tablaMetas').innerHTML = html;
-
-        const f = (v) => v.toLocaleString('es-AR', {style:'currency', currency:'ARS'});
-        document.getElementById('resTotal').innerText = f(saldoAc);
-        document.getElementById('resInt').innerText = f(saldoAc - invAc);
-
-        render(labels, dataTotal, dataInvertido, dataSoloInteres);
+        document.getElementById('resTotal').innerText = saldo.toLocaleString('es-AR', {style:'currency', currency:'ARS'});
+        document.getElementById('resInt').innerText = (saldo-inv).toLocaleString('es-AR', {style:'currency', currency:'ARS'});
+        
+        renderGrafico(labels, dataTotal, dataInv, dataInt);
     }
 
-    function render(labels, total, inv, int) {
+    function renderGrafico(labels, total, inv, int) {
         const ctx = document.getElementById('miGrafico').getContext('2d');
         if (grafico) grafico.destroy();
         grafico = new Chart(ctx, {
@@ -199,17 +180,17 @@
             data: {
                 labels: labels,
                 datasets: [
-                    { label: 'TOTAL', data: total, borderColor: '#d4af37', borderWidth: 3, fill: false, tension: 0.3, pointRadius: 0 },
-                    { label: 'CAPITAL', data: inv, borderColor: '#ffffff', borderWidth: 2, borderDash: [5,5], fill: false, tension: 0.1, pointRadius: 0 },
-                    { label: 'GANANCIA', data: int, borderColor: '#39ff14', borderWidth: 2, fill: false, tension: 0.3, pointRadius: 0 }
+                    { label: 'TOTAL', data: total, borderColor: '#d4af37', borderWidth: 3, pointRadius: 0, tension: 0.3 },
+                    { label: 'CAPITAL', data: inv, borderColor: '#ffffff', borderWidth: 2, borderDash: [5,5], pointRadius: 0 },
+                    { label: 'INTERÉS', data: int, borderColor: '#39ff14', borderWidth: 2, pointRadius: 0, tension: 0.3 }
                 ]
             },
             options: { 
                 responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { labels: { color: '#d4af37', font: { size: 9 } }, position: 'top' } },
-                scales: {
-                    x: { ticks: { color: '#d4af37', font: { size: 9 } } },
-                    y: { ticks: { color: '#d4af37', font: { size: 9 } } }
+                plugins: { legend: { labels: { color: '#d4af37', font: { size: 9 } } } },
+                scales: { 
+                    x: { ticks: { color: '#d4af37', font: { size: 8 } }, grid: { display: false } },
+                    y: { ticks: { color: '#d4af37', font: { size: 8 } }, grid: { color: 'rgba(212,175,55,0.1)' } }
                 }
             }
         });
