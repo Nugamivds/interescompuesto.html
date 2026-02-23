@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Inversión Gold - Nube Realtime</title>
+    <title>Inversión Gold - Metas Master</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
@@ -35,17 +35,27 @@
         .diario-card div { font-size: 26px; font-weight: bold; color: #ffd700; }
         
         .chart-container { height: 300px; width: 100%; background: rgba(0,0,0,0.5); border-radius: 10px; padding: 10px; box-sizing: border-box; }
-        .metas-container { max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.6); border-radius: 10px; font-size: 13px; }
+        
+        /* ESTILO DE METAS ACTUALIZADO */
+        .metas-container { max-height: 300px; overflow-y: auto; background: rgba(0,0,0,0.6); border-radius: 10px; font-size: 13px; border: 1px solid rgba(212, 175, 55, 0.2); }
         table { width: 100%; border-collapse: collapse; }
-        td { padding: 10px; border-bottom: 1px solid rgba(212,175,55,0.1); }
-        .meta-ok { color: #ffd700; background: rgba(212, 175, 55, 0.2); font-weight: bold; }
+        td { padding: 8px 12px; border-bottom: 1px solid rgba(212,175,55,0.05); color: #888; }
+        
+        /* Meta superada y tachada */
+        .meta-tachada { text-decoration: line-through; color: #444; opacity: 0.6; }
+        
+        /* Meta actual alcanzada (Resaltada) */
+        .meta-current { color: #ffd700; background: rgba(212, 175, 55, 0.2); font-weight: bold; text-decoration: none !important; }
+        
+        /* Meta próxima */
+        .meta-next { color: #bbb; }
     </style>
 </head>
 <body>
 <div class="overlay"></div>
 <div class="container">
     <div class="panel">
-        <div class="status-bar">● SINCRONIZACIÓN NUBE ACTIVA</div>
+        <div class="status-bar">● CLOUD SYNC ACTIVE</div>
         <h2>💰 MOVIMIENTOS</h2>
         
         <label>INYECTAR CAPITAL ($)</label>
@@ -64,11 +74,11 @@
         </div>
 
         <div class="diario-card">
-            <small style="color:var(--gold)">GANANCIA DIARIA ESTIMADA</small>
+            <small style="color:var(--gold)">GANANCIA DIARIA ACTUAL</small>
             <div id="rentaDiaria">$ 0</div>
         </div>
 
-        <h2>🏆 ESCALA DE METAS</h2>
+        <h2>🏆 ESCALA DE METAS (100 a 10.000)</h2>
         <div class="metas-container"><table><tbody id="tablaMetas"></tbody></table></div>
     </div>
 
@@ -83,7 +93,6 @@
 </div>
 
 <script>
-    // Configuración con tus credenciales
     const firebaseConfig = {
         apiKey: "AIzaSyBUKbTIfmFklM_Y059j-kKD8Q-L6o2lYs8",
         authDomain: "inversiongold-2c5c7.firebaseapp.com",
@@ -94,12 +103,10 @@
         appId: "1:826689789700:web:36c95e7f9b9e57d8b13a51"
     };
 
-    // Inicializar Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     let grafico;
 
-    // LEER DE LA NUBE: Se activa solo cuando algo cambia en Firebase
     db.ref('miInversion').on('value', (snapshot) => {
         const val = snapshot.val();
         if (val) {
@@ -107,11 +114,10 @@
             document.getElementById('apo').value = val.apo;
             document.getElementById('tna').value = val.tna;
             document.getElementById('yrs').value = val.yrs;
-            actualizarCalculos(false); // Actualiza la pantalla sin volver a subir
+            actualizarCalculos(false);
         }
     });
 
-    // SUBIR A LA NUBE: Se activa cuando escribes algo
     function subirANube() {
         const datos = {
             cap: parseFloat(document.getElementById('cap').value) || 0,
@@ -143,28 +149,57 @@
         const tMensual = (tna / 100) / 12;
         const tDiaria = (tna / 100) / 365;
         const meses = Math.floor(yrs * 12);
+        const rentaActualDiaria = cap * tDiaria;
 
-        document.getElementById('rentaDiaria').innerText = (cap * tDiaria).toLocaleString('es-AR', {style:'currency', currency:'ARS'});
+        document.getElementById('rentaDiaria').innerText = rentaActualDiaria.toLocaleString('es-AR', {style:'currency', currency:'ARS'});
 
-        let metas = [1200, 1500, 2000, 3000, 5000, 10000];
-        let metasEnc = {};
+        // GENERAR METAS DE 100 EN 100 HASTA 10.000
+        let metas = [];
+        for(let m = 100; m <= 10000; m += 100) { metas.push(m); }
+
+        let metasLogradasMapping = {};
         let labels = [], dataTotal = [], dataInv = [], dataInt = [];
         let saldo = cap, inv = cap;
 
+        // Proyección para el gráfico y encontrar en qué mes se cumplen las metas futuras
         for (let i = 0; i <= meses; i++) {
             if (i > 0) { inv += apo; saldo += apo; saldo += (saldo * tMensual); }
             labels.push("M" + i);
             dataTotal.push(saldo);
             dataInv.push(inv);
             dataInt.push(saldo - inv);
-            metas.forEach(m => { if (!metasEnc[m] && (saldo * tDiaria) >= m) metasEnc[m] = (i === 0) ? "Ok" : "M" + i; });
+            
+            let rDiariaProyectada = saldo * tDiaria;
+            metas.forEach(m => {
+                if (!metasLogradasMapping[m] && rDiariaProyectada >= m) {
+                    metasLogradasMapping[m] = (i === 0) ? "LOGRADO" : "Mes " + i;
+                }
+            });
         }
 
+        // RENDER DE TABLA DE METAS
         let html = "";
+        let metaMasAltaLograda = 0;
+        metas.forEach(m => { if(rentaActualDiaria >= m) metaMasAltaLograda = m; });
+
         metas.forEach(m => {
-            let log = metasEnc[m];
-            html += `<tr class="${log==='Ok'?'meta-ok':''}"><td>$${m.toLocaleString()}</td><td align="right">${log||'--'}</td></tr>`;
+            let info = metasLogradasMapping[m] || "--";
+            let clase = "";
+            
+            if (m < metaMasAltaLograda) {
+                clase = "meta-tachada"; // Superada hace tiempo
+            } else if (m === metaMasAltaLograda) {
+                clase = "meta-current"; // La meta que tienes hoy
+            } else {
+                clase = "meta-next"; // Futuras
+            }
+
+            html += `<tr class="${clase}">
+                        <td>$${m.toLocaleString()} / día</td>
+                        <td align="right">${info}</td>
+                     </tr>`;
         });
+        
         document.getElementById('tablaMetas').innerHTML = html;
         document.getElementById('resTotal').innerText = saldo.toLocaleString('es-AR', {style:'currency', currency:'ARS'});
         document.getElementById('resInt').innerText = (saldo-inv).toLocaleString('es-AR', {style:'currency', currency:'ARS'});
