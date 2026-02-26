@@ -1,36 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gold Cloud - Fixed</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --p: #00ff88; --bg: #0b0f1a; --card: #161c2d; --accent: #38bdf8; --border: #2d3748; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow-x: hidden; background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; }
+
+        /* Sidebar mejorado para que NO se asome */
+        .sidebar { position: fixed; top: 0; right: 0; width: 280px; height: 100%; background: #1a2236; z-index: 1200; padding: 25px; border-left: 1px solid var(--border); transform: translateX(101%); transition: transform 0.3s ease; }
+        .sidebar.open { transform: translateX(0); }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; z-index: 1100; backdrop-filter: blur(4px); }
+
+        .wrapper { padding: 15px; max-width: 900px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .settings-btn { font-size: 28px; cursor: pointer; color: var(--accent); }
+
+        .live-display { background: #000; padding: 20px; border-radius: 20px; text-align: center; border: 2px solid var(--p); box-shadow: 0 0 15px rgba(0,255,136,0.1); }
+        .live-amount { font-family: 'Courier New', monospace; font-size: 24px; font-weight: bold; color: var(--p); }
+        
+        .injection-box { background: var(--card); padding: 15px; border-radius: 15px; border: 1px solid var(--border); margin: 15px 0; }
+        .btn-inject { width: 100%; background: var(--p); color: #0b0f1a; border: none; border-radius: 12px; padding: 15px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+
+        .chart-container { height: 300px; background: var(--card); border-radius: 15px; padding: 10px; border: 1px solid var(--border); }
+        .goals-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin-top: 15px; }
+        .goal-item { background: var(--card); padding: 12px; border-radius: 12px; border: 1px solid var(--border); text-align: center; font-size: 13px; }
+        .goal-item.reached { border-color: var(--p); background: rgba(0,255,136,0.05); }
+
+        input { width: 100%; padding: 12px; background: #0b0f1a; border: 1px solid var(--border); color: white; border-radius: 8px; margin-top: 5px; outline: none; }
+        label { display: block; font-size: 11px; color: var(--accent); margin-top: 15px; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+
+<div id="overlay" class="overlay" onclick="toggleMenu()"></div>
+
+<div id="sidebar" class="sidebar">
+    <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="color:var(--p); margin:0;">AJUSTES</h3>
+        <span style="cursor:pointer; font-size: 30px;" onclick="toggleMenu()">×</span>
+    </div>
+    <label>Capital Base ($)</label><input type="number" id="cap" onchange="saveData()">
+    <label>Aporte Mensual ($)</label><input type="number" id="apo_mensual" onchange="saveData()">
+    <label>TNA %</label><input type="number" id="tna" onchange="saveData()">
+    <label>Años Proyección</label><input type="number" id="yrs" onchange="saveData()">
+</div>
+
+<div class="wrapper">
+    <div class="header">
+        <h2 style="margin:0; color:var(--p); font-size: 18px;">GOLD CLOUD</h2>
+        <div class="settings-btn" onclick="toggleMenu()">⚙️</div>
+    </div>
+
+    <div class="live-display">
+        <div id="live-money" class="live-amount">$ 0,00</div>
+        <div id="acc-today" style="font-size: 12px; color: var(--p); margin-top: 5px; opacity: 0.8;">Iniciando...</div>
+        <div style="background: #1e293b; padding: 5px 15px; border-radius: 20px; margin-top: 10px; display: inline-block;">
+            <span id="daily-value" style="font-weight: bold; color: var(--accent); font-size: 13px;">$ 0,00 / día</span>
+        </div>
+    </div>
+
+    <div class="injection-box">
+        <input type="number" id="manual_amount" placeholder="Monto a inyectar..." inputmode="decimal">
+        <div style="display: flex; gap: 5px; margin-top: 10px;">
+            <button onclick="document.getElementById('manual_amount').value=1000" style="flex:1; background:#1e293b; color:white; border:none; border-radius:5px; padding:5px; font-size:10px;">+1k</button>
+            <button onclick="document.getElementById('manual_amount').value=3000" style="flex:1; background:#1e293b; color:white; border:none; border-radius:5px; padding:5px; font-size:10px;">+3k</button>
+            <button onclick="document.getElementById('manual_amount').value=10000" style="flex:1; background:#1e293b; color:white; border:none; border-radius:5px; padding:5px; font-size:10px;">+10k</button>
+        </div>
+        <button class="btn-inject" onclick="injectCapital()">CONFIRMAR INYECCIÓN</button>
+    </div>
+
+    <div class="chart-container">
+        <canvas id="myChart"></canvas>
+    </div>
+
+    <div id="goals-list" class="goals-grid"></div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyBUKbTIfmFklM_Y059j-kKD8Q-L6o2lYs8",
+        authDomain: "inversiongold-2c5c7.firebaseapp.com",
+        databaseURL: "https://inversiongold-2c5c7-default-rtdb.firebaseio.com",
+        projectId: "inversiongold-2c5c7",
+        storageBucket: "inversiongold-2c5c7.firebasestorage.app",
+        messagingSenderId: "826689789700",
+        appId: "1:826689789700:web:36c95e7f9b9e57d8b13a51"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const dataRef = ref(db, 'user_data');
+
+    onValue(dataRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            document.getElementById('cap').value = data.cap || 0;
+            document.getElementById('apo_mensual').value = data.apo || 0;
+            document.getElementById('tna').value = data.tna || 32;
+            document.getElementById('yrs').value = data.yrs || 1;
+            window.updateUI();
+        }
+    });
+
+    window.saveData = function() {
+        set(dataRef, {
+            cap: parseFloat(document.getElementById('cap').value) || 0,
+            apo: parseFloat(document.getElementById('apo_mensual').value) || 0,
+            tna: parseFloat(document.getElementById('tna').value) || 0,
+            yrs: parseFloat(document.getElementById('yrs').value) || 1
+        });
+    };
+
+    window.injectCapital = function() {
+        const input = document.getElementById('manual_amount');
+        const monto = parseFloat(input.value) || 0;
+        if (monto > 0) {
+            const capActual = parseFloat(document.getElementById('cap').value) || 0;
+            document.getElementById('cap').value = (capActual + monto).toFixed(2);
+            input.value = '';
+            window.saveData();
+        }
+    };
+</script>
+
 <script>
-    setInterval(() => {
+    let myChart;
+
+    function toggleMenu() {
+        const sb = document.getElementById('sidebar');
+        const ov = document.getElementById('overlay');
+        sb.classList.toggle('open');
+        ov.style.display = sb.classList.contains('open') ? 'block' : 'none';
+        document.body.style.overflow = sb.classList.contains('open') ? 'hidden' : '';
+    }
+
+    function updateUI() {
         const cap = parseFloat(document.getElementById('cap').value) || 0;
         const apo = parseFloat(document.getElementById('apo_mensual').value) || 0;
         const tna = (parseFloat(document.getElementById('tna').value) || 0) / 100;
+        const yrs = parseFloat(document.getElementById('yrs').value) || 1;
+        const tasaM = tna / 12;
         
-        // Tasa por segundo (Interés compuesto continuo aproximado)
-        // 31536000 son los segundos que tiene un año
-        const tasaPorSegundo = tna / 31536000;
+        const gDiariaActual = (cap * tna) / 365;
+        document.getElementById('daily-value').innerText = gDiariaActual.toLocaleString('es-AR', {style:'currency', currency:'ARS'}) + " / día";
+
+        let mesesP = Math.floor(yrs * 12);
+        let labels = [], dataPuro = [], dataCompuesto = [];
+        let sCompuesto = cap, aPuro = cap;
+
+        for (let i = 0; i <= mesesP; i++) {
+            labels.push(i);
+            dataPuro.push(aPuro);
+            dataCompuesto.push(sCompuesto);
+            sCompuesto = (sCompuesto + apo) * (1 + tasaM);
+            aPuro += apo;
+        }
+
+        const ctx = document.getElementById('myChart').getContext('2d');
+        if (myChart) myChart.destroy();
+        myChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    { label: 'Compuesto', data: dataCompuesto, borderColor: '#00ff88', tension: 0.3, fill: false, pointRadius: 0, pointHitRadius: 20 },
+                    { label: 'Puro', data: dataPuro, borderColor: '#64748b', tension: 0, borderDash: [5, 5], fill: false, pointRadius: 0 }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        enabled: true,
+                        backgroundColor: 'rgba(11, 15, 26, 0.95)',
+                        titleFont: { size: 16 },
+                        bodyFont: { size: 14 },
+                        callbacks: {
+                            title: (items) => `Mes ${items[0].label} (Año ${Math.floor(items[0].label/12)})`,
+                            label: (item) => `${item.dataset.label}: ${item.parsed.y.toLocaleString('es-AR', {style:'currency', currency:'ARS'})}`
+                        }
+                    }
+                },
+                scales: { 
+                    y: { ticks: { color: '#64748b', font: { size: 9 } }, grid: { color: '#1e293b' } },
+                    x: { display: false }
+                }
+            }
+        });
+
+        // Metas dinámicas 100 en 100 hasta 10k
+        const list = document.getElementById('goals-list');
+        list.innerHTML = '';
+        const ganFinal = (sCompuesto * tna) / 365;
         
+        let m = 100;
+        let count = 0;
+        while (m <= ganFinal && count < 100) { // Límite de 100 cuadritos para no colgar el cel
+            if (m >= gDiariaActual - 200) {
+                let div = document.createElement('div');
+                let mCount = 0, sTemp = cap;
+                let lograda = gDiariaActual >= m;
+                if (!lograda) {
+                    while ((sTemp * tna / 365) < m && mCount < mesesP) {
+                        sTemp = (sTemp + apo) * (1 + tasaM); mCount++;
+                    }
+                }
+                div.className = 'goal-item ' + (lograda ? 'reached' : '');
+                div.innerHTML = `<div style="color:${lograda?'var(--p)':'var(--accent)'}; font-weight:bold;">$${m.toLocaleString()}</div>
+                                 <div style="font-size:10px; opacity:0.6">${lograda?'¡Logrado!':'En '+mCount+' meses'}</div>`;
+                list.appendChild(div);
+                count++;
+            }
+            if (m < 10000) m += 100;
+            else if (m < 50000) m += 5000;
+            else m += 20000;
+        }
+    }
+
+    // Cronómetro que NO se reinicia
+    setInterval(() => {
+        const cap = parseFloat(document.getElementById('cap').value) || 0;
+        const tna = (parseFloat(document.getElementById('tna').value) || 0) / 100;
         const now = new Date();
-        // Usamos los segundos del minuto actual para darle movimiento visual constante
-        // Pero para que sea "real", lo ideal es mostrar el crecimiento sobre el capital base
+        const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
         
-        // Simulación de crecimiento visual en tiempo real:
-        // Tomamos el capital base y le sumamos el proporcional del interés diario según la hora
-        const segundosTranscurridosHoy = (now.getHours() * 3600) + (now.getMinutes() * 60) + now.getSeconds();
-        const gananciaDiariaTotal = (cap * tna) / 365;
-        const ganadoHastaElSegundoActual = (gananciaDiariaTotal / 86400) * segundosTranscurridosHoy;
+        const segundosHoy = (now - startOfDay) / 1000;
+        const gananciaSegundo = ((cap * tna) / 365) / 86400;
+        const acumuladoAhora = gananciaSegundo * segundosHoy;
 
-        // Mostramos el Capital Base + Lo ganado en el día
-        // Nota: Para que el capital no "vuelva atrás" a las 00:00, 
-        // lo ideal en una app financiera real es impactar el interés al capital base cada día.
-        
-        document.getElementById('live-money').innerText = (cap + ganadoHastaElSegundoActual).toLocaleString('es-AR', { 
-            style: 'currency', 
-            currency: 'ARS', 
-            minimumFractionDigits: 3 
+        document.getElementById('live-money').innerText = (cap + acumuladoAhora).toLocaleString('es-AR', { 
+            style: 'currency', currency: 'ARS', minimumFractionDigits: 3 
         });
-
-        document.getElementById('acc-today').innerText = "Creciendo hoy: $" + ganadoHastaElSegundoActual.toLocaleString('es-AR', {
-            minimumFractionDigits: 4
-        });
-        
+        document.getElementById('acc-today').innerText = "Hoy: +$" + acumuladoAhora.toLocaleString('es-AR', {minimumFractionDigits: 3});
     }, 1000);
+
+    window.updateUI = updateUI;
 </script>
+</body>
+</html>
