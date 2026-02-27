@@ -10,7 +10,6 @@
     <meta name="apple-mobile-web-app-title" content="Gold Cloud">
     
     <link rel="apple-touch-icon" sizes="180x180" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='white'/%3E%3Ctext y='75' x='50' font-family='Arial' font-size='70' text-anchor='middle' fill='%23FFD700' style='filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.4));'%3E%24%3C/text%3E%3C/svg%3E">
-    
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='white'/%3E%3Ctext y='75' x='50' font-family='Arial' font-size='70' text-anchor='middle' fill='%23FFD700'%3E%24%3C/text%3E%3C/svg%3E">
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -30,7 +29,7 @@
         .live-display { background: #000; padding: 20px; border-radius: 20px; text-align: center; border: 2px solid var(--p); }
         .live-amount { font-family: 'Courier New', monospace; font-size: clamp(20px, 6vw, 24px); font-weight: bold; color: var(--p); }
         
-        .next-goal-box { margin-top: 10px; font-size: 12px; color: #94a3b8; }
+        .next-goal-box { margin-top: 8px; font-size: 13px; color: #94a3b8; }
         .next-goal-box b { color: var(--working); }
 
         .injection-box { background: var(--card); padding: 15px; border-radius: 15px; border: 1px solid var(--border); margin: 15px 0; }
@@ -44,8 +43,6 @@
         .goal-item.reached .amount { text-decoration: line-through; color: #64748b; }
         .goal-item.current { border-color: var(--working); background: rgba(250, 204, 21, 0.05); box-shadow: 0 0 10px rgba(250, 204, 21, 0.2); }
         .goal-item.current .status { color: var(--working); font-weight: bold; }
-        .goal-item.future { border-color: var(--border); }
-        .goal-item.future .status { color: var(--accent); }
 
         input { width: 100%; padding: 12px; background: #0b0f1a; border: 1px solid var(--border); color: white; border-radius: 8px; margin-top: 5px; outline: none; }
         label { display: block; font-size: 11px; color: var(--accent); margin-top: 15px; text-transform: uppercase; }
@@ -80,8 +77,7 @@
         </div>
 
         <div id="next-goal-info" class="next-goal-box">
-            Faltan <b>$...</b> para el objetivo de <b>$.../día</b><br>
-            <span style="font-size: 10px; opacity: 0.8;">Inyectar <b>$...</b> para alcanzarlo ya</span>
+            Faltan <b>$...</b> para el objetivo de <b>$.../día</b>
         </div>
     </div>
 
@@ -194,13 +190,11 @@
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { grid: { color: '#1e293b' }, ticks: { color: '#64748b', font: { size: 10 } } } } }
         });
 
-        // --- LÓGICA DE METAS Y FALTANTE ---
         const list = document.getElementById('goals-list');
         list.innerHTML = '';
         let m = 100;
         let lastMonthAdded = -1;
         let foundCurrent = false;
-        let nextGoalAmount = 0;
         
         while (m < 800000) {
             let mCount = 0;
@@ -214,16 +208,8 @@
             
             if (isWorking) {
                 foundCurrent = true;
-                nextGoalAmount = m;
-                // Cálculo de faltante
                 const diffGain = m - gDiariaActual;
-                const neededCap = (m * 365) / tna;
-                const diffCap = neededCap - cap;
-                
-                document.getElementById('next-goal-info').innerHTML = `
-                    Faltan <b>$${diffGain.toFixed(2)}</b> para el objetivo de <b>$${m.toLocaleString()}/día</b><br>
-                    <span style="font-size: 10px; opacity: 0.8;">Inyectar <b>$${diffCap.toLocaleString('es-AR')}</b> para alcanzarlo ya</span>
-                `;
+                document.getElementById('next-goal-info').innerHTML = `Faltan <b>$${diffGain.toFixed(2)}</b> para el objetivo de <b>$${m.toLocaleString()}/día</b>`;
             }
 
             if (isReached || isWorking || mCount > lastMonthAdded) {
