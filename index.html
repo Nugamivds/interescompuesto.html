@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gold Cloud - Minimalist</title>
+    <title>Gold Cloud - Metas Tachadas</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { --p: #00ff88; --bg: #0b0f1a; --card: #161c2d; --accent: #38bdf8; --border: #2d3748; }
@@ -26,8 +26,14 @@
 
         .chart-container { height: 300px; background: var(--card); border-radius: 15px; padding: 10px; border: 1px solid var(--border); }
         .goals-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin-top: 15px; }
-        .goal-item { background: var(--card); padding: 12px; border-radius: 12px; border: 1px solid var(--border); text-align: center; font-size: 13px; }
-        .goal-item.reached { border-color: var(--p); background: rgba(0,255,136,0.05); }
+        
+        /* Estilo de meta normal */
+        .goal-item { background: var(--card); padding: 12px; border-radius: 12px; border: 1px solid var(--border); text-align: center; font-size: 13px; transition: all 0.3s; }
+        
+        /* Estilo de meta LOGRADA (Tachada) */
+        .goal-item.reached { border-color: rgba(0,255,136,0.3); background: rgba(0,255,136,0.02); opacity: 0.5; }
+        .goal-item.reached .amount { text-decoration: line-through; color: #64748b !important; }
+        .goal-item.reached .status { color: var(--p); font-weight: bold; }
 
         input { width: 100%; padding: 12px; background: #0b0f1a; border: 1px solid var(--border); color: white; border-radius: 8px; margin-top: 5px; outline: none; font-size: 16px; }
         label { display: block; font-size: 11px; color: var(--accent); margin-top: 15px; text-transform: uppercase; }
@@ -146,15 +152,13 @@
         document.getElementById('daily-value').innerText = gDiariaActual.toLocaleString('es-AR', {style:'currency', currency:'ARS'}) + " / día";
 
         let mesesP = Math.floor(yrs * 12);
-        let labels = [], dataPuro = [], dataCompuesto = [];
-        let sCompuesto = cap, aPuro = cap;
+        let labels = [], dataCompuesto = [];
+        let sCompuesto = cap;
 
         for (let i = 0; i <= mesesP; i++) {
             labels.push(i);
-            dataPuro.push(aPuro);
             dataCompuesto.push(sCompuesto);
             sCompuesto = (sCompuesto + apo) * (1 + tasaM);
-            aPuro += apo;
         }
 
         const ctx = document.getElementById('myChart').getContext('2d');
@@ -163,25 +167,11 @@
             type: 'line',
             data: {
                 labels,
-                datasets: [
-                    { label: 'Compuesto', data: dataCompuesto, borderColor: '#00ff88', tension: 0.3, fill: false, pointRadius: 0, pointHitRadius: 20 },
-                    { label: 'Puro', data: dataPuro, borderColor: '#64748b', tension: 0, borderDash: [5, 5], fill: false, pointRadius: 0 }
-                ]
+                datasets: [{ label: 'Compuesto', data: dataCompuesto, borderColor: '#00ff88', tension: 0.3, fill: false, pointRadius: 0, pointHitRadius: 20 }]
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
-                interaction: { mode: 'index', intersect: false },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        enabled: true,
-                        backgroundColor: 'rgba(11, 15, 26, 0.95)',
-                        callbacks: {
-                            title: (items) => `Mes ${items[0].label} (Año ${Math.floor(items[0].label/12)})`,
-                            label: (item) => `${item.dataset.label}: ${item.parsed.y.toLocaleString('es-AR', {style:'currency', currency:'ARS'})}`
-                        }
-                    }
-                },
+                plugins: { legend: { display: false } },
                 scales: { 
                     y: { ticks: { color: '#64748b', font: { size: 9 } }, grid: { color: '#1e293b' } },
                     x: { display: false }
@@ -189,28 +179,38 @@
             }
         });
 
+        // --- Lógica de Metas: Tachado de Logradas ---
         const list = document.getElementById('goals-list');
         list.innerHTML = '';
         const ganFinal = (sCompuesto * tna) / 365;
         
         let m = 100;
         let count = 0;
-        while (m <= ganFinal && count < 80) { 
-            if (m >= gDiariaActual - 200) {
+        
+        // Empezamos a mostrar desde 300 pesos antes de tu meta actual para ver las tachadas
+        const inicioVisual = Math.max(100, Math.floor(gDiariaActual / 100) * 100 - 300);
+
+        while (m <= ganFinal && count < 60) { 
+            if (m >= inicioVisual) {
                 let div = document.createElement('div');
                 let mCount = 0, sTemp = cap;
                 let lograda = gDiariaActual >= m;
+
                 if (!lograda) {
                     while ((sTemp * tna / 365) < m && mCount < mesesP) {
                         sTemp = (sTemp + apo) * (1 + tasaM); mCount++;
                     }
                 }
+
                 div.className = 'goal-item ' + (lograda ? 'reached' : '');
-                div.innerHTML = `<div style="color:${lograda?'var(--p)':'var(--accent)'}; font-weight:bold;">$${m.toLocaleString()}</div>
-                                 <div style="font-size:10px; opacity:0.6">${lograda?'Logrado':'En '+mCount+' meses'}</div>`;
+                div.innerHTML = `
+                    <div class="amount" style="color:var(--accent); font-weight:bold;">$${m.toLocaleString()}</div>
+                    <div class="status" style="font-size:10px; opacity:0.8;">${lograda ? '✓ LOGRADO' : 'EN ' + mCount + ' MESES'}</div>
+                `;
                 list.appendChild(div);
                 count++;
             }
+            
             if (m < 10000) m += 100;
             else if (m < 50000) m += 5000;
             else m += 20000;
