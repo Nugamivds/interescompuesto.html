@@ -9,15 +9,14 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="My Wallet">
     
-    <!-- Generador de Ícono interno para garantizar compatibilidad con iOS (Evita el cuadrado blanco) -->
     <script>
         (function() {
             var c = document.createElement('canvas');
             c.width = 512; c.height = 512;
             var ctx = c.getContext('2d');
-            ctx.fillStyle = '#ffffff'; // Fondo blanco
+            ctx.fillStyle = '#ffffff'; 
             ctx.fillRect(0, 0, 512, 512);
-            ctx.fillStyle = '#ffb700'; // Dorado fuerte
+            ctx.fillStyle = '#ffb700'; 
             ctx.font = 'bold 380px Arial, sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -116,6 +115,26 @@
     <div id="goals-list" class="goals-grid" style="padding-bottom: 80px;"></div>
 </div>
 
+<script>
+    // FUNCIONES GLOBALES DE TIEMPO
+    window.getCurrentOpDate = function() {
+        const now = new Date();
+        const start = new Date(now);
+        start.setHours(5, 0, 0, 0);
+        if (now < start) start.setDate(start.getDate() - 1);
+        const y = start.getFullYear();
+        const m = String(start.getMonth() + 1).padStart(2, '0');
+        const d = String(start.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    };
+
+    window.getDaysPassed = function(d1, d2) {
+        const date1 = new Date(d1 + "T12:00:00Z");
+        const date2 = new Date(d2 + "T12:00:00Z");
+        return Math.floor((date2 - date1) / (1000 * 60 * 60 * 24));
+    };
+</script>
+
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
@@ -137,33 +156,16 @@
     const db = getDatabase(app);
     const dataRef = ref(db, 'user_data');
 
-    function getCurrentOpDate() {
-        const now = new Date();
-        const start = new Date(now);
-        start.setHours(5, 0, 0, 0);
-        if (now < start) start.setDate(start.getDate() - 1);
-        const y = start.getFullYear();
-        const m = String(start.getMonth() + 1).padStart(2, '0');
-        const d = String(start.getDate()).padStart(2, '0');
-        return `${y}-${m}-${d}`;
-    }
-
-    function getDaysPassed(d1, d2) {
-        const date1 = new Date(d1 + "T12:00:00Z");
-        const date2 = new Date(d2 + "T12:00:00Z");
-        return Math.floor((date2 - date1) / (1000 * 60 * 60 * 24));
-    }
-
     onValue(dataRef, (snapshot) => {
         const data = snapshot.val();
         if (data) {
-            let currentOpDateStr = getCurrentOpDate();
+            let currentOpDateStr = window.getCurrentOpDate();
             let lastDateStr = data.lastDate || currentOpDateStr;
             let cap = parseFloat(data.cap) || 0;
             const tna = parseFloat(data.tna) || 32;
 
             if (lastDateStr !== currentOpDateStr) {
-                let daysPassed = getDaysPassed(lastDateStr, currentOpDateStr);
+                let daysPassed = window.getDaysPassed(lastDateStr, currentOpDateStr);
                 if (daysPassed > 0) {
                     let dailyRate = (tna / 100) / 365;
                     cap = cap * Math.pow(1 + dailyRate, daysPassed);
@@ -187,7 +189,18 @@
             apo: parseFloat(document.getElementById('apo_mensual').value) || 0,
             tna: parseFloat(document.getElementById('tna').value) || 32,
             yrs: parseFloat(document.getElementById('yrs').value) || 1,
-            lastDate: window.lastDate || getCurrentOpDate()
+            lastDate: window.lastDate || window.getCurrentOpDate()
+        });
+    };
+
+    // Función exportada para forzar el guardado de la capitalización automáticamente a las 5 AM
+    window.triggerCapitalization = function(newCap, currentOpStr) {
+        set(dataRef, {
+            cap: newCap,
+            apo: parseFloat(document.getElementById('apo_mensual').value) || 0,
+            tna: parseFloat(document.getElementById('tna').value) || 32,
+            yrs: parseFloat(document.getElementById('yrs').value) || 1,
+            lastDate: currentOpStr
         });
     };
 
@@ -261,21 +274,17 @@
         let goalsToRender =[];
         let proximoObjetivoValor = (Math.floor(gDiariaActual / 100) + 1) * 100;
 
-        // 1. Objetivos Pasados (Saltando de 100 en 100)
         let mPast = 100;
         while (mPast < proximoObjetivoValor) {
             goalsToRender.push({ valor: mPast, isReached: true, isWorking: false, label: '✓ LOGRADO' });
             mPast += 100;
         }
 
-        // 2. Objetivo Actual
         goalsToRender.push({ valor: proximoObjetivoValor, isReached: false, isWorking: true, label: 'EN PROCESO' });
 
-        // 3. Objetivos Futuros (El más alto de cada mes)
         let metasPorMes = {};
         let mFuture = proximoObjetivoValor;
 
-        // Definimos el salto del siguiente objetivo
         if (mFuture < 5000) mFuture += 100;
         else if (mFuture < 20000) mFuture += 500;
         else if (mFuture < 100000) mFuture += 5000;
@@ -289,7 +298,6 @@
                 mCount++;
             }
 
-            // Guarda/Sobreescribe siempre la meta más alta en ese mes
             metasPorMes[mCount] = mFuture;
 
             if (mFuture < 5000) mFuture += 100;
@@ -300,7 +308,6 @@
             if (Object.keys(metasPorMes).length > 200) break;
         }
 
-        // Procesamos los futuros y los sumamos a la lista
         Object.keys(metasPorMes).sort((a,b) => a - b).forEach(mesStr => {
             let mCount = parseInt(mesStr);
             let valorMeta = metasPorMes[mCount];
@@ -314,15 +321,12 @@
             }
         });
 
-        // DIBUJAR EN PANTALLA
         goalsToRender.forEach(g => {
             const div = document.createElement('div');
             div.className = `goal-item ${g.isReached ? 'reached' : (g.isWorking ? 'current' : 'future')}`;
             
-            // Lógica del tachado
             let amountHTML = `$${g.valor.toLocaleString()}`;
             if (g.isReached) {
-                // Genera la línea en medio del texto "tachado"
                 amountHTML = `<s style="opacity: 0.6;">${amountHTML}</s>`;
             }
 
@@ -334,7 +338,25 @@
         });
     }
 
+    // INTERVALO DE TIEMPO REAL (AHORA CON DETECTOR DE REINICIO EN VIVO)
     setInterval(() => {
+        const currentOpStr = window.getCurrentOpDate();
+        
+        // ¡LA SOLUCIÓN! Si la app se queda abierta y cruza las 5 AM, fuerza el guardado en Firebase
+        if (window.lastDate && currentOpStr !== window.lastDate && window.triggerCapitalization) {
+            let daysPassed = window.getDaysPassed(window.lastDate, currentOpStr);
+            if (daysPassed > 0) {
+                const currentCap = parseFloat(document.getElementById('cap').value) || 0;
+                const currentTna = (parseFloat(document.getElementById('tna').value) || 32) / 100;
+                const dailyRateRollover = currentTna / 365;
+                const newCap = currentCap * Math.pow(1 + dailyRateRollover, daysPassed);
+                
+                window.lastDate = currentOpStr; // Bloquea para que no guarde repetidamente
+                window.triggerCapitalization(newCap, currentOpStr); // Guarda en Firebase
+                return; // Corta aquí, Firebase actualizará la UI en el siguiente milisegundo
+            }
+        }
+
         const cap = parseFloat(document.getElementById('cap').value) || 0;
         const tna = (parseFloat(document.getElementById('tna').value) || 32) / 100;
         const dailyRate = tna / 365;
