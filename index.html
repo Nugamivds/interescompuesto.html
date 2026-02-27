@@ -14,8 +14,25 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { --p: #00ff88; --bg: #0b0f1a; --card: #161c2d; --accent: #38bdf8; --border: #2d3748; --working: #facc15; }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow-x: hidden; background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; }
+        
+        /* Ajuste iPhone: Evita zoom y mejora el toque */
+        * { 
+            box-sizing: border-box; 
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation; 
+        }
+
+        html, body { 
+            width: 100%; 
+            height: 100%; 
+            margin: 0; 
+            padding: 0; 
+            overflow-x: hidden; 
+            background: var(--bg); 
+            color: white; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
+        }
 
         .sidebar { position: fixed; top: 0; right: 0; width: 280px; height: 100%; background: #1a2236; z-index: 1200; padding: 25px; border-left: 1px solid var(--border); transform: translateX(101%); transition: transform 0.3s ease; }
         .sidebar.open { transform: translateX(0); }
@@ -23,7 +40,7 @@
 
         .wrapper { padding: 15px; max-width: 900px; margin: 0 auto; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .settings-btn { font-size: 28px; cursor: pointer; color: var(--accent); }
+        .settings-btn { font-size: 28px; cursor: pointer; color: var(--accent); padding: 5px; }
 
         .live-display { background: #000; padding: 20px; border-radius: 20px; text-align: center; border: 2px solid var(--p); }
         .live-amount { font-family: 'Courier New', monospace; font-size: clamp(20px, 6vw, 24px); font-weight: bold; color: var(--p); }
@@ -32,17 +49,29 @@
         .next-goal-box b { color: var(--working); font-size: 16px; }
 
         .injection-box { background: var(--card); padding: 15px; border-radius: 15px; border: 1px solid var(--border); margin: 15px 0; }
-        .btn-inject { width: 100%; background: var(--p); color: #0b0f1a; border: none; border-radius: 12px; padding: 15px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn-inject { width: 100%; background: var(--p); color: #0b0f1a; border: none; border-radius: 12px; padding: 15px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 16px; }
 
-        .chart-container { height: 260px; background: var(--card); border-radius: 15px; padding: 10px; border: 1px solid var(--border); }
+        .chart-container { height: 260px; background: var(--card); border-radius: 15px; padding: 10px; border: 1px solid var(--border); position: relative; }
         .goals-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-top: 15px; }
         
         .goal-item { background: var(--card); padding: 12px; border-radius: 12px; border: 1px solid var(--border); text-align: center; font-size: 13px; }
         .goal-item.reached { border-color: rgba(0,255,136,0.2); opacity: 0.4; }
-        .goal-item.reached .amount { text-decoration: line-through; color: #64748b; }
         .goal-item.current { border-color: var(--working); background: rgba(250, 204, 21, 0.05); box-shadow: 0 0 10px rgba(250, 204, 21, 0.2); }
 
-        input { width: 100%; padding: 12px; background: #0b0f1a; border: 1px solid var(--border); color: white; border-radius: 8px; margin-top: 5px; outline: none; }
+        /* Inputs a 16px para evitar que iPhone haga zoom automático al tocar */
+        input { 
+            width: 100%; 
+            padding: 12px; 
+            background: #0b0f1a; 
+            border: 1px solid var(--border); 
+            color: white; 
+            border-radius: 8px; 
+            margin-top: 5px; 
+            outline: none; 
+            font-size: 16px; 
+            appearance: none;
+            -webkit-appearance: none;
+        }
         label { display: block; font-size: 11px; color: var(--accent); margin-top: 15px; text-transform: uppercase; }
     </style>
 </head>
@@ -52,12 +81,12 @@
 <div id="sidebar" class="sidebar">
     <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <h3 style="color:var(--p); margin:0;">AJUSTES</h3>
-        <span style="cursor:pointer; font-size: 30px;" onclick="toggleMenu()">×</span>
+        <span style="cursor:pointer; font-size: 30px; padding: 10px;" onclick="toggleMenu()">×</span>
     </div>
-    <label>Capital Base ($)</label><input type="number" id="cap" onchange="saveData()">
-    <label>Aporte Mensual ($)</label><input type="number" id="apo_mensual" onchange="saveData()">
-    <label>TNA %</label><input type="number" id="tna" onchange="saveData()">
-    <label>Años Proyección</label><input type="number" id="yrs" onchange="saveData()">
+    <label>Capital Base ($)</label><input type="number" id="cap" onchange="saveData()" placeholder="0">
+    <label>Aporte Mensual ($)</label><input type="number" id="apo_mensual" onchange="saveData()" placeholder="0">
+    <label>TNA %</label><input type="number" id="tna" onchange="saveData()" placeholder="32">
+    <label>Años Proyección</label><input type="number" id="yrs" onchange="saveData()" placeholder="1">
 </div>
 
 <div class="wrapper">
@@ -84,7 +113,7 @@
         <canvas id="myChart"></canvas>
     </div>
 
-    <div id="goals-list" class="goals-grid"></div>
+    <div id="goals-list" class="goals-grid" style="padding-bottom: 50px;"></div>
 </div>
 
 <script type="module">
@@ -145,6 +174,7 @@
         const ov = document.getElementById('overlay');
         sb.classList.toggle('open');
         ov.style.display = sb.classList.contains('open') ? 'block' : 'none';
+        document.body.style.overflow = sb.classList.contains('open') ? 'hidden' : '';
     }
 
     function updateUI() {
@@ -183,10 +213,8 @@
             options: { 
                 responsive: true, 
                 maintainAspectRatio: false, 
-                plugins: { 
-                    legend: { display: false },
-                    tooltip: { enabled: true, mode: 'index', intersect: false }
-                }, 
+                interaction: { mode: 'index', intersect: false },
+                plugins: { legend: { display: false } }, 
                 scales: { 
                     x: { display: false }, 
                     y: { grid: { color: '#1e293b' }, ticks: { color: '#64748b', font: { size: 10 } } } 
@@ -203,7 +231,6 @@
         const list = document.getElementById('goals-list');
         list.innerHTML = '';
         let m = 100;
-        let lastMonthAdded = -1;
         let foundCurrent = false;
 
         while (m < 2000000) {
@@ -217,16 +244,15 @@
             const isWorking = !foundCurrent && gDiariaActual < m;
             if (isWorking) foundCurrent = true;
 
-            if (isReached || isWorking || (mCount > lastMonthAdded && list.children.length < 50)) {
+            if (isReached || isWorking || list.children.length < 40) {
                 const div = document.createElement('div');
                 div.className = `goal-item ${isReached ? 'reached' : (isWorking ? 'current' : 'future')}`;
                 let statusText = isReached ? '✓ LOGRADO' : (isWorking ? 'EN PROCESO' : `EN ${mCount} MESES`);
-                if (!isReached && !isWorking) lastMonthAdded = mCount;
                 div.innerHTML = `<div class="amount" style="font-weight:bold;">$${m.toLocaleString()}</div><div class="status" style="font-size:10px;">${statusText}</div>`;
                 list.appendChild(div);
             }
             if (m < 20000) m += 100; else m += 20000;
-            if (!isReached && list.children.length > 100) break;
+            if (!isReached && list.children.length > 60) break;
         }
     }
 
