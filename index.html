@@ -9,8 +9,33 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="My Wallet">
     
-    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=%24&background=ffffff&color=ffb700&size=512&font-size=0.65&bold=true">
-    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=%24&background=ffffff&color=ffb700&size=128&font-size=0.65&bold=true">
+    <!-- Generador de Ícono interno para garantizar compatibilidad con iOS (Evita el cuadrado blanco) -->
+    <script>
+        (function() {
+            var c = document.createElement('canvas');
+            c.width = 512; c.height = 512;
+            var ctx = c.getContext('2d');
+            ctx.fillStyle = '#ffffff'; // Fondo blanco
+            ctx.fillRect(0, 0, 512, 512);
+            ctx.fillStyle = '#ffb700'; // Dorado fuerte
+            ctx.font = 'bold 380px Arial, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('$', 256, 275);
+            var dataUrl = c.toDataURL('image/png');
+            
+            var appleIcon = document.createElement('link');
+            appleIcon.rel = 'apple-touch-icon';
+            appleIcon.href = dataUrl;
+            document.head.appendChild(appleIcon);
+            
+            var favicon = document.createElement('link');
+            favicon.rel = 'icon';
+            favicon.type = 'image/png';
+            favicon.href = dataUrl;
+            document.head.appendChild(favicon);
+        })();
+    </script>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -88,7 +113,6 @@
 
     <h3 id="label-metas" style="font-size: 14px; color: var(--accent); margin-top: 10px;">PRÓXIMAS METAS DE GANANCIA DIARIA</h3>
     
-    <!-- Restauramos la grilla original -->
     <div id="goals-list" class="goals-grid" style="padding-bottom: 80px;"></div>
 </div>
 
@@ -226,7 +250,6 @@
             options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { grid: { color: '#1e293b' }, ticks: { color: '#64748b', font: { size: 10 } } } } }
         });
 
-        // --- LÓGICA DE OBJETIVOS: SOLO EL MÁS ALTO DE CADA MES ---
         const list = document.getElementById('goals-list');
         list.innerHTML = '';
         
@@ -235,55 +258,82 @@
         
         document.getElementById('label-metas').innerText = `METAS PROYECTADAS A ${yrs} AÑOS`;
 
-        let m = 100;
-        let metasPorMes = {};
+        let goalsToRender =[];
+        let proximoObjetivoValor = (Math.floor(gDiariaActual / 100) + 1) * 100;
 
-        // Simulamos el crecimiento para guardar la meta máxima alcanzada en cada mes
-        while (m <= gananciaDiariaFinalMax + 100) {
+        // 1. Objetivos Pasados (Saltando de 100 en 100)
+        let mPast = 100;
+        while (mPast < proximoObjetivoValor) {
+            goalsToRender.push({ valor: mPast, isReached: true, isWorking: false, label: '✓ LOGRADO' });
+            mPast += 100;
+        }
+
+        // 2. Objetivo Actual
+        goalsToRender.push({ valor: proximoObjetivoValor, isReached: false, isWorking: true, label: 'EN PROCESO' });
+
+        // 3. Objetivos Futuros (El más alto de cada mes)
+        let metasPorMes = {};
+        let mFuture = proximoObjetivoValor;
+
+        // Definimos el salto del siguiente objetivo
+        if (mFuture < 5000) mFuture += 100;
+        else if (mFuture < 20000) mFuture += 500;
+        else if (mFuture < 100000) mFuture += 5000;
+        else mFuture += 20000;
+
+        while (mFuture <= gananciaDiariaFinalMax + 100) {
             let mCount = 0;
             let tempCap = cap;
-            while ((tempCap * dailyRate) < m && mCount < (yrs * 12)) {
+            while ((tempCap * dailyRate) < mFuture && mCount < (yrs * 12)) {
                 tempCap = (tempCap + apo) * monthlyMultiplier;
                 mCount++;
             }
 
-            // Al ir subiendo 'm' (de 100 en 100), esto siempre sobreescribirá con la meta MÁS ALTA de ese mes
-            metasPorMes[mCount] = m;
+            // Guarda/Sobreescribe siempre la meta más alta en ese mes
+            metasPorMes[mCount] = mFuture;
 
-            // Incrementos según el valor (puedes dejarlos todos de 100 en 100 si prefieres, pero esto lo hace más limpio a futuro)
-            if (m < 5000) m += 100;
-            else if (m < 20000) m += 500;
-            else if (m < 100000) m += 5000;
-            else m += 20000;
+            if (mFuture < 5000) mFuture += 100;
+            else if (mFuture < 20000) mFuture += 500;
+            else if (mFuture < 100000) mFuture += 5000;
+            else mFuture += 20000;
 
             if (Object.keys(metasPorMes).length > 200) break;
         }
 
-        let foundCurrent = false;
-
-        // Renderizamos solo 1 recuadro por mes (el que quedó guardado por ser el más alto)
+        // Procesamos los futuros y los sumamos a la lista
         Object.keys(metasPorMes).sort((a,b) => a - b).forEach(mesStr => {
             let mCount = parseInt(mesStr);
             let valorMeta = metasPorMes[mCount];
+            if (valorMeta > proximoObjetivoValor) {
+                goalsToRender.push({
+                    valor: valorMeta,
+                    isReached: false,
+                    isWorking: false,
+                    label: (mCount === 0 ? 'MES ACTUAL' : `MES ${mCount}`)
+                });
+            }
+        });
 
-            const isReached = gDiariaActual >= valorMeta;
-            const isWorking = !foundCurrent && gDiariaActual < valorMeta;
-            if (isWorking) foundCurrent = true;
-
+        // DIBUJAR EN PANTALLA
+        goalsToRender.forEach(g => {
             const div = document.createElement('div');
-            div.className = `goal-item ${isReached ? 'reached' : (isWorking ? 'current' : 'future')}`;
+            div.className = `goal-item ${g.isReached ? 'reached' : (g.isWorking ? 'current' : 'future')}`;
             
-            let statusLabel = isReached ? '✓ LOGRADO' : (isWorking ? 'EN PROCESO' : (mCount === 0 ? 'MES ACTUAL' : `MES ${mCount}`));
-            
+            // Lógica del tachado
+            let amountHTML = `$${g.valor.toLocaleString()}`;
+            if (g.isReached) {
+                // Genera la línea en medio del texto "tachado"
+                amountHTML = `<s style="opacity: 0.6;">${amountHTML}</s>`;
+            }
+
             div.innerHTML = `
-                <div style="font-weight:bold; color:${isWorking ? 'var(--working)' : 'white'}">$${valorMeta.toLocaleString()}</div>
-                <div style="font-size:10px; color:${isWorking ? 'var(--working)' : '#64748b'}">${statusLabel}</div>
+                <div style="font-weight:bold; color:${g.isWorking ? 'var(--working)' : 'white'}">${amountHTML}</div>
+                <div style="font-size:10px; color:${g.isWorking ? 'var(--working)' : '#64748b'}">${g.label}</div>
             `;
             list.appendChild(div);
         });
     }
 
-    // INTERVALO DE TIEMPO REAL
     setInterval(() => {
         const cap = parseFloat(document.getElementById('cap').value) || 0;
         const tna = (parseFloat(document.getElementById('tna').value) || 32) / 100;
