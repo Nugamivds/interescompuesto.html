@@ -9,8 +9,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="My Wallet">
     
-    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=%24&background=10b981&color=facc15&size=512&font-size=0.65&bold=true">
-    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=%24&background=10b981&color=facc15&size=128&font-size=0.65&bold=true">
+    <!-- Íconos actualizados: Símbolo $ dorado fuerte con fondo blanco -->
+    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=%24&background=ffffff&color=ffb700&size=512&font-size=0.65&bold=true">
+    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=%24&background=ffffff&color=ffb700&size=128&font-size=0.65&bold=true">
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -91,7 +92,6 @@
 </div>
 
 <script type="module">
-    // Se usan los enlaces web (CDN) para que HTML lo entienda sin congelarse
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
@@ -108,7 +108,7 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    const analytics = getAnalytics(app); // Analytics activado
+    const analytics = getAnalytics(app);
     const db = getDatabase(app);
     const dataRef = ref(db, 'user_data');
 
