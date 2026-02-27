@@ -88,8 +88,8 @@
 
     <h3 id="label-metas" style="font-size: 14px; color: var(--accent); margin-top: 10px;">PRÓXIMAS METAS DE GANANCIA DIARIA</h3>
     
-    <!-- Modificado: Se quitó la clase goals-grid de aquí para que los grupos fluyan hacia abajo -->
-    <div id="goals-list" style="padding-bottom: 80px;"></div>
+    <!-- Restauramos la grilla original -->
+    <div id="goals-list" class="goals-grid" style="padding-bottom: 80px;"></div>
 </div>
 
 <script type="module">
@@ -226,7 +226,7 @@
             options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { grid: { color: '#1e293b' }, ticks: { color: '#64748b', font: { size: 10 } } } } }
         });
 
-        // --- LÓGICA DE OBJETIVOS AGRUPADOS POR MES ---
+        // --- LÓGICA DE OBJETIVOS: SOLO EL MÁS ALTO DE CADA MES ---
         const list = document.getElementById('goals-list');
         list.innerHTML = '';
         
@@ -236,67 +236,51 @@
         document.getElementById('label-metas').innerText = `METAS PROYECTADAS A ${yrs} AÑOS`;
 
         let m = 100;
-        let foundCurrent = false;
-        
-        // Objeto para agrupar metas por mes
-        const metasAgrupadas = {};
+        let metasPorMes = {};
 
+        // Simulamos el crecimiento para guardar la meta máxima alcanzada en cada mes
         while (m <= gananciaDiariaFinalMax + 100) {
-            const isReached = gDiariaActual >= m;
-            const isWorking = !foundCurrent && gDiariaActual < m;
-            if (isWorking) foundCurrent = true;
-
             let mCount = 0;
             let tempCap = cap;
-            // Buscamos en qué mes se supera la meta
             while ((tempCap * dailyRate) < m && mCount < (yrs * 12)) {
                 tempCap = (tempCap + apo) * monthlyMultiplier;
                 mCount++;
             }
 
-            // Guardamos la meta en la categoría del mes correspondiente
-            if (!metasAgrupadas[mCount]) {
-                metasAgrupadas[mCount] =[];
-            }
-            metasAgrupadas[mCount].push({ valor: m, isReached, isWorking });
+            // Al ir subiendo 'm' (de 100 en 100), esto siempre sobreescribirá con la meta MÁS ALTA de ese mes
+            metasPorMes[mCount] = m;
 
+            // Incrementos según el valor (puedes dejarlos todos de 100 en 100 si prefieres, pero esto lo hace más limpio a futuro)
             if (m < 5000) m += 100;
             else if (m < 20000) m += 500;
             else if (m < 100000) m += 5000;
             else m += 20000;
 
-            // Seguridad: Si hay demasiadas metas, cortamos el loop
-            let totalMetas = Object.values(metasAgrupadas).flat().length;
-            if (totalMetas > 200) break;
+            if (Object.keys(metasPorMes).length > 200) break;
         }
 
-        // Renderizado del HTML con títulos separando por Meses
-        for (let mes in metasAgrupadas) {
-            // Crear título del mes
-            const headerMes = document.createElement('h4');
-            headerMes.style.cssText = 'color: var(--accent); font-size: 13px; margin: 20px 0 10px 0; border-bottom: 1px solid var(--border); padding-bottom: 5px; text-transform: uppercase;';
-            headerMes.innerText = mes == 0 ? 'LOGRADOS / MES ACTUAL' : `MES ${mes}`;
-            list.appendChild(headerMes);
+        let foundCurrent = false;
 
-            // Crear el grid de recuadros de metas específico para ese mes
-            const gridMes = document.createElement('div');
-            gridMes.className = 'goals-grid';
+        // Renderizamos solo 1 recuadro por mes (el que quedó guardado por ser el más alto)
+        Object.keys(metasPorMes).sort((a,b) => a - b).forEach(mesStr => {
+            let mCount = parseInt(mesStr);
+            let valorMeta = metasPorMes[mCount];
 
-            metasAgrupadas[mes].forEach(g => {
-                const div = document.createElement('div');
-                div.className = `goal-item ${g.isReached ? 'reached' : (g.isWorking ? 'current' : 'future')}`;
-                
-                let statusLabel = g.isReached ? '✓ LOGRADO' : (g.isWorking ? 'EN PROCESO' : 'ESPERA');
-                
-                div.innerHTML = `
-                    <div style="font-weight:bold; color:${g.isWorking ? 'var(--working)' : 'white'}">$${g.valor.toLocaleString()}</div>
-                    <div style="font-size:10px; color:${g.isWorking ? 'var(--working)' : '#64748b'}">${statusLabel}</div>
-                `;
-                gridMes.appendChild(div);
-            });
+            const isReached = gDiariaActual >= valorMeta;
+            const isWorking = !foundCurrent && gDiariaActual < valorMeta;
+            if (isWorking) foundCurrent = true;
 
-            list.appendChild(gridMes);
-        }
+            const div = document.createElement('div');
+            div.className = `goal-item ${isReached ? 'reached' : (isWorking ? 'current' : 'future')}`;
+            
+            let statusLabel = isReached ? '✓ LOGRADO' : (isWorking ? 'EN PROCESO' : (mCount === 0 ? 'MES ACTUAL' : `MES ${mCount}`));
+            
+            div.innerHTML = `
+                <div style="font-weight:bold; color:${isWorking ? 'var(--working)' : 'white'}">$${valorMeta.toLocaleString()}</div>
+                <div style="font-size:10px; color:${isWorking ? 'var(--working)' : '#64748b'}">${statusLabel}</div>
+            `;
+            list.appendChild(div);
+        });
     }
 
     // INTERVALO DE TIEMPO REAL
