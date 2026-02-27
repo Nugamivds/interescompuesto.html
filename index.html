@@ -148,10 +148,8 @@
         const tasaM = tna / 12;
         const gDiariaActual = (cap * tna) / 365;
 
-        // AQUÍ ESTÁ LA LÍNEA RESTAURADA PARA EL VALOR DIARIO
         document.getElementById('daily-value').innerText = gDiariaActual.toLocaleString('es-AR', {style:'currency', currency:'ARS'}) + " / día";
 
-        // --- LÓGICA DE DOBLE LÍNEA ---
         const ctx = document.getElementById('myChart').getContext('2d');
         if (myChart) myChart.destroy();
         
@@ -223,7 +221,9 @@
         let m = 100;
         let lastMonthAdded = -1;
         let foundCurrent = false;
-        const startShowing = Math.floor(gDiariaActual / 100) * 100 - 200;
+        
+        // Empieza a mostrar siempre desde $100
+        const startShowing = 100; 
 
         while (m < 800000) {
             let mCount = 0;
@@ -248,7 +248,9 @@
                 }
             }
             if (m < 10000) m += 100; else if (m < 50000) m += 5000; else m += 20000;
-            if (list.children.length > 40) break;
+            
+            // Límite flexibilizado para que no corte el historial de logrados
+            if (!isReached && list.children.length > 150) break;
         }
     }
 
