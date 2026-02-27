@@ -3,7 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gold Cloud - Proyección Completa</title>
+    <title>Gold Cloud</title>
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Gold Cloud">
+    
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w2.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22white%22/><text y=%22.9em%22 font-size=%2280%22 x=%2250%25%22 text-anchor=%22middle%22 fill=%22%23FFD700%22 filter=%22drop-shadow(2px 2px 2px rgba(0,0,0,0.3))%22>💰</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w2.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22white%22/><text y=%22.9em%22 font-size=%2280%22 x=%2250%25%22 text-anchor=%22middle%22 fill=%22%23FFD700%22 filter=%22drop-shadow(2px 2px 2px rgba(0,0,0,0.3))%22>💰</text></svg>">
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { --p: #00ff88; --bg: #0b0f1a; --card: #161c2d; --accent: #38bdf8; --border: #2d3748; --working: #facc15; }
@@ -160,7 +168,6 @@
             labels.push(i); 
             dataCompuesto.push(sCompuesto); 
             dataPuro.push(aPuro);
-            
             sCompuesto = (sCompuesto + apo) * (1 + tasaM); 
             aPuro += apo;
         }
@@ -170,61 +177,19 @@
             data: {
                 labels: labels, 
                 datasets: [
-                    {
-                        label: 'Interés Compuesto', 
-                        data: dataCompuesto, 
-                        borderColor: '#00ff88', 
-                        borderWidth: 3,
-                        pointRadius: 0, 
-                        tension: 0.3,
-                        fill: false
-                    },
-                    {
-                        label: 'Capital Puesto', 
-                        data: dataPuro, 
-                        borderColor: '#64748b', 
-                        borderWidth: 2,
-                        borderDash: [5, 5],
-                        pointRadius: 0, 
-                        tension: 0,
-                        fill: false
-                    }
+                    { label: 'Interés Compuesto', data: dataCompuesto, borderColor: '#00ff88', borderWidth: 3, pointRadius: 0, tension: 0.3, fill: false },
+                    { label: 'Capital Puesto', data: dataPuro, borderColor: '#64748b', borderWidth: 2, borderDash: [5, 5], pointRadius: 0, tension: 0, fill: false }
                 ]
             }, 
-            options: {
-                responsive: true, 
-                maintainAspectRatio: false, 
-                plugins: { 
-                    legend: { display: false },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false,
-                        callbacks: {
-                            title: (item) => "Mes " + item[0].label,
-                            label: (item) => item.dataset.label + ": " + item.parsed.y.toLocaleString('es-AR', {style:'currency', currency:'ARS'})
-                        }
-                    }
-                }, 
-                scales: { 
-                    x: { display: false }, 
-                    y: { 
-                        grid: { color: '#1e293b' },
-                        ticks: { color: '#64748b', font: { size: 10 } }
-                    } 
-                }
-            }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { grid: { color: '#1e293b' }, ticks: { color: '#64748b', font: { size: 10 } } } } }
         });
 
-        // --- LÓGICA DE METAS INTELIGENTES ---
         const list = document.getElementById('goals-list');
         list.innerHTML = '';
         let m = 100;
         let lastMonthAdded = -1;
         let foundCurrent = false;
         
-        // Empieza a mostrar siempre desde $100
-        const startShowing = 100; 
-
         while (m < 800000) {
             let mCount = 0;
             let sGoal = cap;
@@ -232,25 +197,20 @@
                 sGoal = (sGoal + apo) * (1 + tasaM);
                 mCount++;
             }
-
             const isReached = gDiariaActual >= m;
             const isWorking = !foundCurrent && gDiariaActual < m;
             if (isWorking) foundCurrent = true;
 
             if (isReached || isWorking || mCount > lastMonthAdded) {
-                if (m >= startShowing) {
-                    const div = document.createElement('div');
-                    div.className = `goal-item ${isReached ? 'reached' : (isWorking ? 'current' : 'future')}`;
-                    let statusText = isReached ? '✓ LOGRADO' : (isWorking ? 'EN PROCESO' : `EN ${mCount} MESES`);
-                    if (!isReached && !isWorking) lastMonthAdded = mCount;
-                    div.innerHTML = `<div class="amount" style="font-weight:bold;">$${m.toLocaleString()}</div><div class="status" style="font-size:10px;">${statusText}</div>`;
-                    list.appendChild(div);
-                }
+                const div = document.createElement('div');
+                div.className = `goal-item ${isReached ? 'reached' : (isWorking ? 'current' : 'future')}`;
+                let statusText = isReached ? '✓ LOGRADO' : (isWorking ? 'EN PROCESO' : `EN ${mCount} MESES`);
+                if (!isReached && !isWorking) lastMonthAdded = mCount;
+                div.innerHTML = `<div class="amount" style="font-weight:bold;">$${m.toLocaleString()}</div><div class="status" style="font-size:10px;">${statusText}</div>`;
+                list.appendChild(div);
             }
             if (m < 10000) m += 100; else if (m < 50000) m += 5000; else m += 20000;
-            
-            // Límite flexibilizado para que no corte el historial de logrados
-            if (!isReached && list.children.length > 150) break;
+            if (!isReached && list.children.length > 200) break;
         }
     }
 
