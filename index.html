@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gold Cloud - Doble Proyección</title>
+    <title>Gold Cloud - Proyección Completa</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { --p: #00ff88; --bg: #0b0f1a; --card: #161c2d; --accent: #38bdf8; --border: #2d3748; --working: #facc15; }
@@ -147,6 +147,9 @@
         const yrs = parseFloat(document.getElementById('yrs').value) || 1;
         const tasaM = tna / 12;
         const gDiariaActual = (cap * tna) / 365;
+
+        // AQUÍ ESTÁ LA LÍNEA RESTAURADA PARA EL VALOR DIARIO
+        document.getElementById('daily-value').innerText = gDiariaActual.toLocaleString('es-AR', {style:'currency', currency:'ARS'}) + " / día";
 
         // --- LÓGICA DE DOBLE LÍNEA ---
         const ctx = document.getElementById('myChart').getContext('2d');
