@@ -10,7 +10,6 @@
     <meta name="apple-mobile-web-app-title" content="My Wallet">
     
     <link rel="apple-touch-icon" sizes="180x180" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='white'/%3E%3Ctext y='75' x='50' font-family='Arial' font-size='70' text-anchor='middle' fill='%23FFD700' style='filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.4));'%3E%24%3C/text%3E%3C/svg%3E">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='white'/%3E%3Ctext y='75' x='50' font-family='Arial' font-size='70' text-anchor='middle' fill='%23FFD700'%3E%24%3C/text%3E%3C/svg%3E">
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -18,7 +17,6 @@
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow-x: hidden; background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; }
 
-        /* SIDEBAR SETTINGS */
         .sidebar { position: fixed; top: 0; right: 0; width: 280px; height: 100%; background: #1a2236; z-index: 1200; padding: 25px; border-left: 1px solid var(--border); transform: translateX(101%); transition: transform 0.3s ease; }
         .sidebar.open { transform: translateX(0); }
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; z-index: 1100; backdrop-filter: blur(4px); }
@@ -27,19 +25,15 @@
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .settings-btn { font-size: 28px; cursor: pointer; color: var(--accent); }
 
-        /* MAIN DISPLAY */
-        .live-display { background: #000; padding: 20px; border-radius: 20px; text-align: center; border: 2px solid var(--p); box-shadow: 0 0 20px rgba(0, 255, 136, 0.1); }
+        .live-display { background: #000; padding: 20px; border-radius: 20px; text-align: center; border: 2px solid var(--p); }
         .live-amount { font-family: 'Courier New', monospace; font-size: clamp(20px, 6vw, 24px); font-weight: bold; color: var(--p); }
         
         .next-goal-box { margin-top: 12px; padding: 12px; background: rgba(250, 204, 21, 0.1); border-radius: 12px; font-size: 14px; border: 1px dashed var(--working); color: #fff; }
         .next-goal-box b { color: var(--working); font-size: 16px; }
 
-        /* CONTROLS */
         .injection-box { background: var(--card); padding: 15px; border-radius: 15px; border: 1px solid var(--border); margin: 15px 0; }
-        .btn-inject { width: 100%; background: var(--p); color: #0b0f1a; border: none; border-radius: 12px; padding: 15px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.2s; }
-        .btn-inject:active { transform: scale(0.98); opacity: 0.8; }
+        .btn-inject { width: 100%; background: var(--p); color: #0b0f1a; border: none; border-radius: 12px; padding: 15px; font-weight: bold; cursor: pointer; margin-top: 10px; }
 
-        /* CHART & GOALS */
         .chart-container { height: 260px; background: var(--card); border-radius: 15px; padding: 10px; border: 1px solid var(--border); }
         .goals-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-top: 15px; }
         
@@ -47,10 +41,9 @@
         .goal-item.reached { border-color: rgba(0,255,136,0.2); opacity: 0.4; }
         .goal-item.reached .amount { text-decoration: line-through; color: #64748b; }
         .goal-item.current { border-color: var(--working); background: rgba(250, 204, 21, 0.05); box-shadow: 0 0 10px rgba(250, 204, 21, 0.2); }
-        .goal-item.current .status { color: var(--working); font-weight: bold; }
 
         input { width: 100%; padding: 12px; background: #0b0f1a; border: 1px solid var(--border); color: white; border-radius: 8px; margin-top: 5px; outline: none; }
-        label { display: block; font-size: 11px; color: var(--accent); margin-top: 15px; text-transform: uppercase; letter-spacing: 1px; }
+        label { display: block; font-size: 11px; color: var(--accent); margin-top: 15px; text-transform: uppercase; }
     </style>
 </head>
 <body>
@@ -58,7 +51,7 @@
 <div id="overlay" class="overlay" onclick="toggleMenu()"></div>
 <div id="sidebar" class="sidebar">
     <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h3 style="color:var(--p); margin:0; font-size: 16px;">CONFIGURACIÓN</h3>
+        <h3 style="color:var(--p); margin:0;">AJUSTES</h3>
         <span style="cursor:pointer; font-size: 30px;" onclick="toggleMenu()">×</span>
     </div>
     <label>Capital Base ($)</label><input type="number" id="cap" onchange="saveData()">
@@ -69,21 +62,17 @@
 
 <div class="wrapper">
     <div class="header">
-        <h2 style="margin:0; color:var(--p); font-size: 18px; letter-spacing: 0.5px;">MY WALLET MILLONARIE</h2>
+        <h2 style="margin:0; color:var(--p); font-size: 18px;">MY WALLET MILLONARIE</h2>
         <div class="settings-btn" onclick="toggleMenu()">⚙️</div>
     </div>
 
     <div class="live-display">
         <div id="live-money" class="live-amount">$ 0,00</div>
-        <div id="acc-today" style="font-size: 12px; color: var(--p); margin-top: 5px; opacity: 0.8;">Iniciando sistema...</div>
-        
+        <div id="acc-today" style="font-size: 12px; color: var(--p); margin-top: 5px; opacity: 0.8;">Sincronizando...</div>
         <div style="background: #1e293b; padding: 5px 15px; border-radius: 20px; margin-top: 10px; display: inline-block;">
             <span id="daily-value" style="font-weight: bold; color: var(--accent); font-size: 13px;">$ 0,00 / día</span>
         </div>
-
-        <div id="next-goal-info" class="next-goal-box">
-            Calculando próximo objetivo...
-        </div>
+        <div id="next-goal-info" class="next-goal-box">...</div>
     </div>
 
     <div class="injection-box">
@@ -95,7 +84,7 @@
         <canvas id="myChart"></canvas>
     </div>
 
-    <div id="goals-list" class="goals-grid" style="padding-bottom: 40px;"></div>
+    <div id="goals-list" class="goals-grid"></div>
 </div>
 
 <script type="module">
@@ -156,7 +145,6 @@
         const ov = document.getElementById('overlay');
         sb.classList.toggle('open');
         ov.style.display = sb.classList.contains('open') ? 'block' : 'none';
-        document.body.style.overflow = sb.classList.contains('open') ? 'hidden' : '';
     }
 
     function updateUI() {
@@ -172,31 +160,46 @@
         const ctx = document.getElementById('myChart').getContext('2d');
         if (myChart) myChart.destroy();
         
-        let labels = [], dataCompuesto = [];
-        let sCompuesto = cap;
+        let labels = [], dataCompuesto = [], dataPuro = [];
+        let sCompuesto = cap, aPuro = cap;
+
         for(let i=0; i <= (yrs * 12); i++){ 
-            labels.push(i); 
+            labels.push("Mes " + i); 
             dataCompuesto.push(sCompuesto); 
+            dataPuro.push(aPuro);
             sCompuesto = (sCompuesto + apo) * (1 + tasaM); 
+            aPuro += apo;
         }
 
         myChart = new Chart(ctx, { 
             type: 'line', 
             data: {
                 labels: labels, 
-                datasets: [{ label: 'Interés Compuesto', data: dataCompuesto, borderColor: '#00ff88', borderWidth: 3, pointRadius: 0, tension: 0.3, fill: false }]
+                datasets: [
+                    { label: 'Int. Compuesto', data: dataCompuesto, borderColor: '#00ff88', borderWidth: 3, pointRadius: 2, tension: 0.3, fill: false },
+                    { label: 'Capital Invertido', data: dataPuro, borderColor: '#64748b', borderWidth: 2, borderDash: [5, 5], pointRadius: 0, tension: 0, fill: false }
+                ]
             }, 
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { grid: { color: '#1e293b' }, ticks: { color: '#64748b', font: { size: 10 } } } } }
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                plugins: { 
+                    legend: { display: false },
+                    tooltip: { enabled: true, mode: 'index', intersect: false }
+                }, 
+                scales: { 
+                    x: { display: false }, 
+                    y: { grid: { color: '#1e293b' }, ticks: { color: '#64748b', font: { size: 10 } } } 
+                } 
+            }
         });
 
-        // --- CÁLCULO DE CAPITAL FALTANTE PARA EL SIGUIENTE ESCALÓN DE $100 ---
         const proximoObjetivoValor = (Math.floor(gDiariaActual / 100) + 1) * 100;
         const capitalNecesario = (proximoObjetivoValor * 365) / tna;
         const capitalFaltante = capitalNecesario - cap;
 
         document.getElementById('next-goal-info').innerHTML = `Faltan <b>$${capitalFaltante.toLocaleString('es-AR', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</b> de capital para ganar <b>$${proximoObjetivoValor.toLocaleString()}/día</b>`;
 
-        // --- LISTA DE METAS ---
         const list = document.getElementById('goals-list');
         list.innerHTML = '';
         let m = 100;
@@ -214,7 +217,7 @@
             const isWorking = !foundCurrent && gDiariaActual < m;
             if (isWorking) foundCurrent = true;
 
-            if (isReached || isWorking || mCount > lastMonthAdded) {
+            if (isReached || isWorking || (mCount > lastMonthAdded && list.children.length < 50)) {
                 const div = document.createElement('div');
                 div.className = `goal-item ${isReached ? 'reached' : (isWorking ? 'current' : 'future')}`;
                 let statusText = isReached ? '✓ LOGRADO' : (isWorking ? 'EN PROCESO' : `EN ${mCount} MESES`);
@@ -222,8 +225,8 @@
                 div.innerHTML = `<div class="amount" style="font-weight:bold;">$${m.toLocaleString()}</div><div class="status" style="font-size:10px;">${statusText}</div>`;
                 list.appendChild(div);
             }
-            if (m < 20000) m += 100; else if (m < 100000) m += 5000; else m += 20000;
-            if (!isReached && list.children.length > 200) break;
+            if (m < 20000) m += 100; else m += 20000;
+            if (!isReached && list.children.length > 100) break;
         }
     }
 
