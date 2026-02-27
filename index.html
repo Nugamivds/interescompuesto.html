@@ -9,8 +9,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="My Wallet">
     
-    <link rel="apple-touch-icon" href="https://img.icons8.com/fluency/180/wallet.png">
-    <link rel="icon" type="image/png" href="https://img.icons8.com/fluency/48/wallet.png">
+    <!-- Íconos actualizados: Símbolo $ dorado con fondo verde -->
+    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=%24&background=10b981&color=facc15&size=512&font-size=0.65&bold=true">
+    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=%24&background=10b981&color=facc15&size=128&font-size=0.65&bold=true">
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -151,115 +152,4 @@
     }
 
     function updateUI() {
-        const cap = parseFloat(document.getElementById('cap').value) || 0;
-        const apo = parseFloat(document.getElementById('apo_mensual').value) || 0;
-        const tna = (parseFloat(document.getElementById('tna').value) || 32) / 100;
-        const yrs = parseFloat(document.getElementById('yrs').value) || 1;
-        const tasaM = tna / 12;
-        const gDiariaActual = (cap * tna) / 365;
-
-        document.getElementById('daily-value').innerText = gDiariaActual.toLocaleString('es-AR', {style:'currency', currency:'ARS'}) + " / día";
-
-        const ctx = document.getElementById('myChart').getContext('2d');
-        if (myChart) myChart.destroy();
-        
-        let labels = [], dataCompuesto = [], dataPuro = [];
-        let sCompuesto = cap, aPuro = cap;
-        for(let i=0; i <= (yrs * 12); i++){ 
-            labels.push("Mes " + i); 
-            dataCompuesto.push(sCompuesto); 
-            dataPuro.push(aPuro);
-            sCompuesto = (sCompuesto + apo) * (1 + tasaM); 
-            aPuro += apo;
-        }
-
-        myChart = new Chart(ctx, { 
-            type: 'line', 
-            data: {
-                labels: labels, 
-                datasets: [
-                    { label: 'Int. Compuesto', data: dataCompuesto, borderColor: '#00ff88', borderWidth: 3, pointRadius: 1, tension: 0.3, fill: false },
-                    { label: 'Capital Invertido', data: dataPuro, borderColor: '#64748b', borderWidth: 2, borderDash: [5, 5], pointRadius: 0, tension: 0, fill: false }
-                ]
-            }, 
-            options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { grid: { color: '#1e293b' }, ticks: { color: '#64748b', font: { size: 10 } } } } }
-        });
-
-        // --- LÓGICA DE OBJETIVOS ALARGADA SEGÚN LOS AÑOS ---
-        const list = document.getElementById('goals-list');
-        list.innerHTML = '';
-        
-        // Calculamos el capital final proyectado al final del periodo de años
-        const capitalFinalMax = dataCompuesto[dataCompuesto.length - 1];
-        const gananciaDiariaFinalMax = (capitalFinalMax * tna) / 365;
-        
-        document.getElementById('label-metas').innerText = `METAS PROYECTADAS A ${yrs} AÑOS`;
-
-        let m = 100; // Empezamos en $100/día
-        let foundCurrent = false;
-
-        // La lista se genera hasta alcanzar la ganancia diaria que tendrás al final del periodo configurado
-        while (m <= gananciaDiariaFinalMax + 100) {
-            const isReached = gDiariaActual >= m;
-            const isWorking = !foundCurrent && gDiariaActual < m;
-            if (isWorking) foundCurrent = true;
-
-            // Buscamos en qué mes se llega a esta meta
-            let mCount = 0;
-            let tempCap = cap;
-            while ((tempCap * tna / 365) < m && mCount < (yrs * 12)) {
-                tempCap = (tempCap + apo) * (1 + tasaM);
-                mCount++;
-            }
-
-            const div = document.createElement('div');
-            div.className = `goal-item ${isReached ? 'reached' : (isWorking ? 'current' : 'future')}`;
-            
-            let statusLabel = isReached ? '✓' : (isWorking ? 'PROCESO' : `MES ${mCount}`);
-            
-            div.innerHTML = `
-                <div style="font-weight:bold; color:${isWorking ? 'var(--working)' : 'white'}">$${m.toLocaleString()}</div>
-                <div style="font-size:10px; color:${isWorking ? 'var(--working)' : '#64748b'}">${statusLabel}</div>
-            `;
-            list.appendChild(div);
-
-            // Incrementos inteligentes para no saturar la lista
-            if (m < 5000) m += 100;
-            else if (m < 20000) m += 500;
-            else if (m < 100000) m += 5000;
-            else m += 20000;
-
-            // Seguridad por si los años son demasiados
-            if (list.children.length > 200) break;
-        }
-    }
-
-    // INTERVALO DE TIEMPO REAL (REINICIO 5AM Y RESTA DE OBJETIVO)
-    setInterval(() => {
-        const cap = parseFloat(document.getElementById('cap').value) || 0;
-        const tna = (parseFloat(document.getElementById('tna').value) || 32) / 100;
-        
-        const now = new Date();
-        const start = new Date();
-        start.setHours(5, 0, 0, 0); 
-        if (now < start) start.setDate(start.getDate() - 1);
-        
-        const secSinceReset = (now - start) / 1000;
-        const gSec = ((cap * tna) / 365) / 86400;
-        const accToday = gSec * secSinceReset;
-        
-        document.getElementById('live-money').innerText = (cap + accToday).toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 3 });
-        document.getElementById('acc-today').innerText = "Ganado desde las 5am: +$" + accToday.toLocaleString('es-AR', {minimumFractionDigits: 3});
-
-        const gDiariaActual = (cap * tna) / 365;
-        const proximoObjetivoValor = (Math.floor(gDiariaActual / 100) + 1) * 100;
-        const capitalNecesarioTotal = (proximoObjetivoValor * 365) / tna;
-        const capitalFaltanteReal = capitalNecesarioTotal - (cap + accToday);
-
-        document.getElementById('next-goal-info').innerHTML = `Faltan <b>$${capitalFaltanteReal.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</b> para ganar <b>$${proximoObjetivoValor.toLocaleString()}/día</b>`;
-    }, 1000);
-
-    window.updateUI = updateUI;
-</script>
-</body>
-</html>
+        const cap =
