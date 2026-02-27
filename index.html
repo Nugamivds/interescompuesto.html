@@ -9,7 +9,6 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="My Wallet">
     
-    <!-- Íconos actualizados: Símbolo $ dorado fuerte con fondo blanco -->
     <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=%24&background=ffffff&color=ffb700&size=512&font-size=0.65&bold=true">
     <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=%24&background=ffffff&color=ffb700&size=128&font-size=0.65&bold=true">
 
@@ -56,7 +55,7 @@
         <h3 style="color:var(--p); margin:0;">AJUSTES</h3>
         <span style="cursor:pointer; font-size: 30px;" onclick="toggleMenu()">×</span>
     </div>
-    <label>Capital Base ($)</label><input type="number" id="cap" onchange="saveData()">
+    <label>Capital Base ($)</label><input type="number" id="cap" onchange="saveData()" step="0.01">
     <label>Aporte Mensual ($)</label><input type="number" id="apo_mensual" onchange="saveData()">
     <label>TNA %</label><input type="number" id="tna" onchange="saveData()">
     <label>Años Proyección</label><input type="number" id="yrs" onchange="saveData()">
@@ -88,7 +87,9 @@
     <div class="chart-container"><canvas id="myChart"></canvas></div>
 
     <h3 id="label-metas" style="font-size: 14px; color: var(--accent); margin-top: 10px;">PRÓXIMAS METAS DE GANANCIA DIARIA</h3>
-    <div id="goals-list" class="goals-grid" style="padding-bottom: 80px;"></div>
+    
+    <!-- Modificado: Se quitó la clase goals-grid de aquí para que los grupos fluyan hacia abajo -->
+    <div id="goals-list" style="padding-bottom: 80px;"></div>
 </div>
 
 <script type="module">
@@ -112,12 +113,45 @@
     const db = getDatabase(app);
     const dataRef = ref(db, 'user_data');
 
+    function getCurrentOpDate() {
+        const now = new Date();
+        const start = new Date(now);
+        start.setHours(5, 0, 0, 0);
+        if (now < start) start.setDate(start.getDate() - 1);
+        const y = start.getFullYear();
+        const m = String(start.getMonth() + 1).padStart(2, '0');
+        const d = String(start.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+
+    function getDaysPassed(d1, d2) {
+        const date1 = new Date(d1 + "T12:00:00Z");
+        const date2 = new Date(d2 + "T12:00:00Z");
+        return Math.floor((date2 - date1) / (1000 * 60 * 60 * 24));
+    }
+
     onValue(dataRef, (snapshot) => {
         const data = snapshot.val();
         if (data) {
-            document.getElementById('cap').value = data.cap || 0;
+            let currentOpDateStr = getCurrentOpDate();
+            let lastDateStr = data.lastDate || currentOpDateStr;
+            let cap = parseFloat(data.cap) || 0;
+            const tna = parseFloat(data.tna) || 32;
+
+            if (lastDateStr !== currentOpDateStr) {
+                let daysPassed = getDaysPassed(lastDateStr, currentOpDateStr);
+                if (daysPassed > 0) {
+                    let dailyRate = (tna / 100) / 365;
+                    cap = cap * Math.pow(1 + dailyRate, daysPassed);
+                    set(dataRef, { ...data, cap: cap, lastDate: currentOpDateStr });
+                    return; 
+                }
+            }
+
+            window.lastDate = lastDateStr;
+            document.getElementById('cap').value = cap.toFixed(2);
             document.getElementById('apo_mensual').value = data.apo || 0;
-            document.getElementById('tna').value = data.tna || 32;
+            document.getElementById('tna').value = tna;
             document.getElementById('yrs').value = data.yrs || 1;
             window.updateUI();
         }
@@ -128,7 +162,8 @@
             cap: parseFloat(document.getElementById('cap').value) || 0,
             apo: parseFloat(document.getElementById('apo_mensual').value) || 0,
             tna: parseFloat(document.getElementById('tna').value) || 32,
-            yrs: parseFloat(document.getElementById('yrs').value) || 1
+            yrs: parseFloat(document.getElementById('yrs').value) || 1,
+            lastDate: window.lastDate || getCurrentOpDate()
         });
     };
 
@@ -159,8 +194,10 @@
         const apo = parseFloat(document.getElementById('apo_mensual').value) || 0;
         const tna = (parseFloat(document.getElementById('tna').value) || 32) / 100;
         const yrs = parseFloat(document.getElementById('yrs').value) || 1;
-        const tasaM = tna / 12;
-        const gDiariaActual = (cap * tna) / 365;
+        
+        const dailyRate = tna / 365;
+        const monthlyMultiplier = Math.pow(1 + dailyRate, 365 / 12); 
+        const gDiariaActual = cap * dailyRate;
 
         document.getElementById('daily-value').innerText = gDiariaActual.toLocaleString('es-AR', {style:'currency', currency:'ARS'}) + " / día";
 
@@ -173,7 +210,7 @@
             labels.push("Mes " + i); 
             dataCompuesto.push(sCompuesto); 
             dataPuro.push(aPuro);
-            sCompuesto = (sCompuesto + apo) * (1 + tasaM); 
+            sCompuesto = (sCompuesto + apo) * monthlyMultiplier; 
             aPuro += apo;
         }
 
@@ -182,66 +219,91 @@
             data: {
                 labels: labels, 
                 datasets:[
-                    { label: 'Int. Compuesto', data: dataCompuesto, borderColor: '#00ff88', borderWidth: 3, pointRadius: 1, tension: 0.3, fill: false },
+                    { label: 'Int. Compuesto Diario', data: dataCompuesto, borderColor: '#00ff88', borderWidth: 3, pointRadius: 1, tension: 0.3, fill: false },
                     { label: 'Capital Invertido', data: dataPuro, borderColor: '#64748b', borderWidth: 2, borderDash:[5, 5], pointRadius: 0, tension: 0, fill: false }
                 ]
             }, 
             options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { grid: { color: '#1e293b' }, ticks: { color: '#64748b', font: { size: 10 } } } } }
         });
 
-        // --- LÓGICA DE OBJETIVOS ALARGADA SEGÚN LOS AÑOS ---
+        // --- LÓGICA DE OBJETIVOS AGRUPADOS POR MES ---
         const list = document.getElementById('goals-list');
         list.innerHTML = '';
         
-        // Calculamos el capital final proyectado al final del periodo de años
         const capitalFinalMax = dataCompuesto[dataCompuesto.length - 1];
-        const gananciaDiariaFinalMax = (capitalFinalMax * tna) / 365;
+        const gananciaDiariaFinalMax = capitalFinalMax * dailyRate;
         
         document.getElementById('label-metas').innerText = `METAS PROYECTADAS A ${yrs} AÑOS`;
 
-        let m = 100; // Empezamos en $100/día
+        let m = 100;
         let foundCurrent = false;
+        
+        // Objeto para agrupar metas por mes
+        const metasAgrupadas = {};
 
-        // La lista se genera hasta alcanzar la ganancia diaria que tendrás al final del periodo configurado
         while (m <= gananciaDiariaFinalMax + 100) {
             const isReached = gDiariaActual >= m;
             const isWorking = !foundCurrent && gDiariaActual < m;
             if (isWorking) foundCurrent = true;
 
-            // Buscamos en qué mes se llega a esta meta
             let mCount = 0;
             let tempCap = cap;
-            while ((tempCap * tna / 365) < m && mCount < (yrs * 12)) {
-                tempCap = (tempCap + apo) * (1 + tasaM);
+            // Buscamos en qué mes se supera la meta
+            while ((tempCap * dailyRate) < m && mCount < (yrs * 12)) {
+                tempCap = (tempCap + apo) * monthlyMultiplier;
                 mCount++;
             }
 
-            const div = document.createElement('div');
-            div.className = `goal-item ${isReached ? 'reached' : (isWorking ? 'current' : 'future')}`;
-            
-            let statusLabel = isReached ? '✓' : (isWorking ? 'PROCESO' : `MES ${mCount}`);
-            
-            div.innerHTML = `
-                <div style="font-weight:bold; color:${isWorking ? 'var(--working)' : 'white'}">$${m.toLocaleString()}</div>
-                <div style="font-size:10px; color:${isWorking ? 'var(--working)' : '#64748b'}">${statusLabel}</div>
-            `;
-            list.appendChild(div);
+            // Guardamos la meta en la categoría del mes correspondiente
+            if (!metasAgrupadas[mCount]) {
+                metasAgrupadas[mCount] =[];
+            }
+            metasAgrupadas[mCount].push({ valor: m, isReached, isWorking });
 
-            // Incrementos inteligentes para no saturar la lista
             if (m < 5000) m += 100;
             else if (m < 20000) m += 500;
             else if (m < 100000) m += 5000;
             else m += 20000;
 
-            // Seguridad por si los años son demasiados
-            if (list.children.length > 200) break;
+            // Seguridad: Si hay demasiadas metas, cortamos el loop
+            let totalMetas = Object.values(metasAgrupadas).flat().length;
+            if (totalMetas > 200) break;
+        }
+
+        // Renderizado del HTML con títulos separando por Meses
+        for (let mes in metasAgrupadas) {
+            // Crear título del mes
+            const headerMes = document.createElement('h4');
+            headerMes.style.cssText = 'color: var(--accent); font-size: 13px; margin: 20px 0 10px 0; border-bottom: 1px solid var(--border); padding-bottom: 5px; text-transform: uppercase;';
+            headerMes.innerText = mes == 0 ? 'LOGRADOS / MES ACTUAL' : `MES ${mes}`;
+            list.appendChild(headerMes);
+
+            // Crear el grid de recuadros de metas específico para ese mes
+            const gridMes = document.createElement('div');
+            gridMes.className = 'goals-grid';
+
+            metasAgrupadas[mes].forEach(g => {
+                const div = document.createElement('div');
+                div.className = `goal-item ${g.isReached ? 'reached' : (g.isWorking ? 'current' : 'future')}`;
+                
+                let statusLabel = g.isReached ? '✓ LOGRADO' : (g.isWorking ? 'EN PROCESO' : 'ESPERA');
+                
+                div.innerHTML = `
+                    <div style="font-weight:bold; color:${g.isWorking ? 'var(--working)' : 'white'}">$${g.valor.toLocaleString()}</div>
+                    <div style="font-size:10px; color:${g.isWorking ? 'var(--working)' : '#64748b'}">${statusLabel}</div>
+                `;
+                gridMes.appendChild(div);
+            });
+
+            list.appendChild(gridMes);
         }
     }
 
-    // INTERVALO DE TIEMPO REAL (REINICIO 5AM Y RESTA DE OBJETIVO)
+    // INTERVALO DE TIEMPO REAL
     setInterval(() => {
         const cap = parseFloat(document.getElementById('cap').value) || 0;
         const tna = (parseFloat(document.getElementById('tna').value) || 32) / 100;
+        const dailyRate = tna / 365;
         
         const now = new Date();
         const start = new Date();
@@ -249,15 +311,15 @@
         if (now < start) start.setDate(start.getDate() - 1);
         
         const secSinceReset = (now - start) / 1000;
-        const gSec = ((cap * tna) / 365) / 86400;
+        const gDiariaActual = cap * dailyRate;
+        const gSec = gDiariaActual / 86400;
         const accToday = gSec * secSinceReset;
         
         document.getElementById('live-money').innerText = (cap + accToday).toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 3 });
         document.getElementById('acc-today').innerText = "Ganado desde las 5am: +$" + accToday.toLocaleString('es-AR', {minimumFractionDigits: 3});
 
-        const gDiariaActual = (cap * tna) / 365;
         const proximoObjetivoValor = (Math.floor(gDiariaActual / 100) + 1) * 100;
-        const capitalNecesarioTotal = (proximoObjetivoValor * 365) / tna;
+        const capitalNecesarioTotal = proximoObjetivoValor / dailyRate;
         const capitalFaltanteReal = capitalNecesarioTotal - (cap + accToday);
 
         document.getElementById('next-goal-info').innerHTML = `Faltan <b>$${capitalFaltanteReal.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</b> para ganar <b>$${proximoObjetivoValor.toLocaleString()}/día</b>`;
